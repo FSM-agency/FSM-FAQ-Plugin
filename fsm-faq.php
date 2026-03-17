@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FSM FAQ
  * Description: Custom FAQ post type with ACF fields, page assignment, and [fsm_display_faqs] shortcode. Requires Advanced Custom Fields Pro.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Full Spectrum Marketing
  * Author URI: https://fsm.agency
  * Text Domain: fsm-faq
