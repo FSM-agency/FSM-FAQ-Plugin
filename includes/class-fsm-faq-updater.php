@@ -2,8 +2,7 @@
 /**
  * FSM FAQ: GitHub-based plugin updates via Plugin Update Checker (PUC).
  *
- * Requires: Plugin Update Checker in vendor/plugin-update-checker/ or plugin-update-checker-5.6/
- * Optional: define( 'FSM_FAQ_GITHUB_REPO', 'https://github.com/FSM-agency/FSM-FAQ-Plugin/' );
+ * Uses FSM repo by default; override with define( 'FSM_FAQ_GITHUB_REPO', '...' ) in wp-config if needed.
  *
  * @link https://github.com/YahnisElsts/plugin-update-checker
  */
@@ -16,7 +15,7 @@ $puc_path = FSM_FAQ_PATH . 'vendor/plugin-update-checker/plugin-update-checker.p
 if ( ! file_exists( $puc_path ) ) {
 	$puc_path = FSM_FAQ_PATH . 'plugin-update-checker-5.6/plugin-update-checker.php';
 }
-if ( ! file_exists( $puc_path ) || ! defined( 'FSM_FAQ_GITHUB_REPO' ) || ! FSM_FAQ_GITHUB_REPO ) {
+if ( ! file_exists( $puc_path ) ) {
 	return;
 }
 
@@ -24,8 +23,12 @@ require_once $puc_path;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
+$fsm_faq_repo = ( defined( 'FSM_FAQ_GITHUB_REPO' ) && FSM_FAQ_GITHUB_REPO )
+	? FSM_FAQ_GITHUB_REPO
+	: 'https://github.com/FSM-agency/FSM-FAQ-Plugin/';
+
 $fsm_faq_update_checker = PucFactory::buildUpdateChecker(
-	FSM_FAQ_GITHUB_REPO,
+	$fsm_faq_repo,
 	FSM_FAQ_PATH . 'fsm-faq.php',
 	'fsm-faq'
 );
