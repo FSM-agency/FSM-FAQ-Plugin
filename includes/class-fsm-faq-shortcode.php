@@ -24,6 +24,29 @@ function fsm_faq_is_divi_active() {
 }
 
 /**
+ * Normalize typographic apostrophes (and their HTML entities) to ASCII so they survive
+ * the_content/wp_kses and any filters that strip or replace U+2019 (e.g. property's → property s).
+ * Covers: Unicode chars U+2018/U+2019 and entities &#8216;/&#8217;, &#x2018;/&#x2019;, &lsquo;/&rsquo;.
+ *
+ * @param string $text FAQ answer or other content.
+ * @return string Same content with typographic apostrophes replaced by ASCII apostrophe.
+ * @since 1.1.0
+ */
+function fsm_faq_normalize_typographic_apostrophes( $text ) {
+	if ( ! is_string( $text ) || '' === $text ) {
+		return $text;
+	}
+	$replace = array(
+		"\u{2019}", "\u{2018}",           // RIGHT/LEFT SINGLE QUOTATION MARK
+		"&#8217;", "&#8216;",             // decimal entities
+		"&#x2019;", "&#x2018;",           // hex entities (lowercase)
+		"&#X2019;", "&#X2018;",           // hex entities (uppercase)
+		'&rsquo;', '&lsquo;',             // named entities
+	);
+	return str_replace( $replace, "'", $text );
+}
+
+/**
  * Get FAQ items and schema data for a post. Shared by both shortcodes.
  *
  * Answer text in schema uses the_content + wp_kses_post so acceptedAnswer.text
@@ -77,6 +100,9 @@ function fsm_faq_get_faq_data( $post_id ) {
 		if ( empty( $question ) || empty( $answer ) ) {
 			continue;
 		}
+
+		// Normalize typographic apostrophes so they are not stripped/replaced by the_content or wp_kses.
+		$answer = fsm_faq_normalize_typographic_apostrophes( $answer );
 
 		$result['items'][] = array(
 			'question' => $question,
@@ -140,6 +166,9 @@ function fsm_faq_render_divi_markup( $items ) {
 	$i   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );
+		$answer_content = fsm_faq_normalize_typographic_apostrophes( $answer_content );
+		// Output apostrophe as entity so it survives any post-shortcode processing (e.g. Divi) that strips the raw character.
+		$answer_content = str_replace( "'", '&#39;', $answer_content );
 		$toggle_state_class = ( 0 === $i ) ? 'et_pb_toggle_open' : 'et_pb_toggle_close';
 		$html .= '<div class="et_pb_toggle et_pb_module et_pb_accordion_item ' . esc_attr( $toggle_state_class ) . '">';
 		$html .= '<h3 class="et_pb_toggle_title">' . esc_html( $item['question'] ) . '</h3>';
@@ -174,6 +203,9 @@ function fsm_faq_render_generic_markup( $items ) {
 	$index   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );
+		$answer_content = fsm_faq_normalize_typographic_apostrophes( $answer_content );
+		// Output apostrophe as entity so it survives any post-shortcode processing that strips the raw character.
+		$answer_content = str_replace( "'", '&#39;', $answer_content );
 		$btn_id   = $block_id . '-btn-' . $index;
 		$panel_id = $block_id . '-panel-' . $index;
 		$html    .= '<button type="button" id="' . esc_attr( $btn_id ) . '" class="fsm-faq-accordion__btn" aria-expanded="false" aria-controls="' . esc_attr( $panel_id ) . '">';
@@ -208,7 +240,7 @@ function fsm_display_faqs_shortcode() {
 		return '';
 	}
 
-	$cache_key     = 'fsm_faqs_' . absint( $current_post_id );
+	$cache_key     = 'fsm_faqs_' . absint( $current_post_id ) . '_v' . FSM_FAQ_VERSION;
 	$cached_output = wp_cache_get( $cache_key );
 
 	if ( false !== $cached_output ) {
@@ -261,7 +293,7 @@ function fsm_display_generic_faqs_shortcode() {
 		return '';
 	}
 
-	$cache_key     = 'fsm_faqs_generic_' . absint( $current_post_id );
+	$cache_key     = 'fsm_faqs_generic_' . absint( $current_post_id ) . '_v' . FSM_FAQ_VERSION;
 	$cached_output = wp_cache_get( $cache_key );
 
 	if ( false !== $cached_output ) {
