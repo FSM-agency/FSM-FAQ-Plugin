@@ -26,6 +26,11 @@ function fsm_faq_is_divi_active() {
 /**
  * Get FAQ items and schema data for a post. Shared by both shortcodes.
  *
+ * Answer text in schema uses the_content + wp_kses_post so acceptedAnswer.text
+ * includes the same HTML as the toggle. Keeping the HTML (not stripping to plain
+ * text) helps bots/crawlers see the structure of the answer (paragraphs, lists,
+ * etc.) rather than one run-on block.
+ *
  * @param int $post_id Current page/post ID.
  * @return array{ items: array, schema_questions: array } Empty items/schema_questions on failure.
  * @since 1.1.0
@@ -78,12 +83,13 @@ function fsm_faq_get_faq_data( $post_id ) {
 			'answer'   => $answer,
 		);
 
+		// Schema answer: same the_content + wp_kses_post; HTML preserved so scrapers see structure (paragraphs, lists), not a run-on sentence.
 		$result['schema_questions'][] = array(
 			'@type'          => 'Question',
 			'name'           => esc_html( $question ),
 			'acceptedAnswer' => array(
 				'@type' => 'Answer',
-				'text'  => wp_kses_post( $answer ),
+				'text'  => wp_kses_post( apply_filters( 'the_content', $answer ) ),
 			),
 		);
 	}
@@ -117,6 +123,10 @@ function fsm_faq_enqueue_generic_assets() {
 /**
  * Build Divi accordion markup (original behavior). No schema; caller adds it.
  *
+ * Answer content is run through the_content so all WYSIWYG formatting (paragraphs,
+ * lists, bold, links, etc.) and special characters (e.g. smart apostrophes) output
+ * correctly in the toggle. Output is then passed through wp_kses_post for safety.
+ *
  * @param array $items Array of { question, answer }.
  * @return string HTML.
  * @since 1.1.0
@@ -129,10 +139,11 @@ function fsm_faq_render_divi_markup( $items ) {
 	$html = '<div class="et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left">';
 	$i   = 0;
 	foreach ( $items as $item ) {
+		$answer_content = apply_filters( 'the_content', $item['answer'] );
 		$toggle_state_class = ( 0 === $i ) ? 'et_pb_toggle_open' : 'et_pb_toggle_close';
 		$html .= '<div class="et_pb_toggle et_pb_module et_pb_accordion_item ' . esc_attr( $toggle_state_class ) . '">';
 		$html .= '<h3 class="et_pb_toggle_title">' . esc_html( $item['question'] ) . '</h3>';
-		$html .= '<div class="et_pb_toggle_content clearfix">' . wp_kses_post( $item['answer'] ) . '</div>';
+		$html .= '<div class="et_pb_toggle_content clearfix">' . wp_kses_post( $answer_content ) . '</div>';
 		$html .= '</div>';
 		$i++;
 	}
@@ -142,6 +153,10 @@ function fsm_faq_render_divi_markup( $items ) {
 
 /**
  * Build generic accordion markup (W3Schools-style). No schema; caller adds it.
+ *
+ * Answer content is run through the_content so all WYSIWYG formatting (paragraphs,
+ * lists, bold, links, etc.) and special characters (e.g. smart apostrophes) output
+ * correctly in the toggle. Output is then passed through wp_kses_post for safety.
  *
  * @param array $items Array of { question, answer }.
  * @return string HTML.
@@ -158,13 +173,14 @@ function fsm_faq_render_generic_markup( $items ) {
 	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '">';
 	$index   = 0;
 	foreach ( $items as $item ) {
+		$answer_content = apply_filters( 'the_content', $item['answer'] );
 		$btn_id   = $block_id . '-btn-' . $index;
 		$panel_id = $block_id . '-panel-' . $index;
 		$html    .= '<button type="button" id="' . esc_attr( $btn_id ) . '" class="fsm-faq-accordion__btn" aria-expanded="false" aria-controls="' . esc_attr( $panel_id ) . '">';
 		$html    .= '<h3 class="fsm-faq-accordion__title">' . esc_html( $item['question'] ) . '</h3>';
 		$html    .= '</button>';
 		$html    .= '<div id="' . esc_attr( $panel_id ) . '" class="fsm-faq-accordion__panel" role="region" aria-labelledby="' . esc_attr( $btn_id ) . '">';
-		$html    .= '<div class="fsm-faq-accordion__panel-inner">' . wp_kses_post( $item['answer'] ) . '</div>';
+		$html    .= '<div class="fsm-faq-accordion__panel-inner">' . wp_kses_post( $answer_content ) . '</div>';
 		$html    .= '</div>';
 		$index++;
 	}
