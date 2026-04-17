@@ -48,7 +48,12 @@ function fsm_has_faqs_for_page( $post_id = null ) {
  * and invalidates [fsm_display_faqs] cache.
  */
 function fsm_update_faq_status_on_save( $post_id, $post ) {
-	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! in_array( $post->post_type, array( 'page', 'faq' ), true ) ) {
+	$parent_types = function_exists( 'fsm_faq_get_parent_post_types' )
+		? fsm_faq_get_parent_post_types()
+		: array( 'page' );
+	$tracked_types = array_merge( array( 'faq' ), $parent_types );
+
+	if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! in_array( $post->post_type, $tracked_types, true ) ) {
 		return;
 	}
 
@@ -63,7 +68,7 @@ function fsm_update_faq_status_on_save( $post_id, $post ) {
 			$old_pages = (array) get_field( 'display_on_pages', $post_id, false );
 			$pages_to_check = array_merge( $pages_to_check, $old_pages );
 		}
-	} elseif ( 'page' === $post->post_type ) {
+	} elseif ( in_array( $post->post_type, $parent_types, true ) ) {
 		$pages_to_check[] = $post_id;
 	}
 

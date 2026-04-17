@@ -39,9 +39,9 @@ function fsm_faq_bootstrap() {
 		return;
 	}
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-cpt.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-acf-fields.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-admin.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-shortcode.php';
-	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-acf-fields.php';
 }
 
 function fsm_faq_acf_required_notice() {
