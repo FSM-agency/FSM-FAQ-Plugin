@@ -19,19 +19,23 @@ This plugin can use [Plugin Update Checker](https://github.com/YahnisElsts/plugi
 
 ### 3. Tell the plugin where to check for updates
 
-On each site (or in a shared `wp-config.php`), define the repo URL:
+**Public repo (recommended):** keep the repository **public** on GitHub. The plugin already points at the default FSM URL (`https://github.com/FSM-agency/FSM-FAQ-Plugin/`). In that case you do **not** need any `wp-config.php` defines on client sites—no API keys on each install.
+
+If the canonical repo URL is different, set it once per site (or in a shared `wp-config.php`):
 
 ```php
 define( 'FSM_FAQ_GITHUB_REPO', 'https://github.com/YourOrg/fsm-faq/' );
 ```
 
-Use your actual org/repo. Trailing slash is fine.
+Trailing slash is fine.
 
-**Private repo:** create a [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` scope and add:
+**Private repo (optional):** if you must keep the repo private, create a [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` scope (or a fine-grained token with read access to that repo) and add **on each site** that should receive updates:
 
 ```php
 define( 'FSM_FAQ_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxx' );
 ```
+
+Prefer a public repo so you avoid rotating tokens across many hosts.
 
 ### 4. Optional: change update branch
 
@@ -55,7 +59,7 @@ Sites will see the update within about 12 hours, or immediately if someone click
 ## Flow summary
 
 - **Source of truth:** Your GitHub repo.
-- **Sites:** Install the plugin once (from a release zip or clone). They need `FSM_FAQ_GITHUB_REPO` (and optionally `FSM_FAQ_GITHUB_TOKEN`) set.
+- **Sites:** Install the plugin once (from a release zip or clone). For the default **public** repo, no defines are required. Custom or private repos need `FSM_FAQ_GITHUB_REPO` and, if private, `FSM_FAQ_GITHUB_TOKEN` per site.
 - **Updates:** You release on GitHub → PUC on each site detects the new version → WordPress shows "Update available" → one-click update.
 
 No WordPress.org listing or custom server required.

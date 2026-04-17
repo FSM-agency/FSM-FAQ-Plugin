@@ -2,7 +2,9 @@
 /**
  * FSM FAQ: GitHub-based plugin updates via Plugin Update Checker (PUC).
  *
- * Uses FSM repo by default; override with define( 'FSM_FAQ_GITHUB_REPO', '...' ) in wp-config if needed.
+ * Default source is the public repo below. No wp-config constants are required when that repo
+ * is public and matches your install. Override FSM_FAQ_GITHUB_REPO if the code lives elsewhere;
+ * use FSM_FAQ_GITHUB_TOKEN only for private repositories (never commit tokens).
  *
  * @link https://github.com/YahnisElsts/plugin-update-checker
  */
