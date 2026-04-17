@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.0.3
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -57,6 +57,9 @@ To push this plugin to GitHub and have all sites receive update notifications:
    Sites will show "Update available" and can update with one click.
 
 == Changelog ==
+
+= 1.0.3 =
+* Release 1.0.3.
 
 = 1.0.0 =
 * Initial release. CPT, ACF field groups (FAQs + Page FAQs), admin columns, save_post (_has_faqs + cache invalidation), [fsm_display_faqs] shortcode.
