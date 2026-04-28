@@ -28,7 +28,7 @@ function fsm_faq_is_divi_active() {
  * the_content/wp_kses and any filters that strip or replace U+2019 (e.g. property's → property s).
  * Covers: Unicode chars U+2018/U+2019 and entities &#8216;/&#8217;, &#x2018;/&#x2019;, &lsquo;/&rsquo;.
  *
- * @param string $text FAQ answer or other content.
+ * @param string $text FAQ question title, answer body, or other content.
  * @return string Same content with typographic apostrophes replaced by ASCII apostrophe.
  * @since 1.1.0
  */
@@ -94,7 +94,7 @@ function fsm_faq_get_faq_data( $post_id ) {
 
 	while ( $faq_query->have_posts() ) {
 		$faq_query->the_post();
-		$question = get_the_title();
+		$question = fsm_faq_normalize_typographic_apostrophes( get_the_title() );
 		$answer   = get_field( 'faq_answer' );
 
 		if ( empty( $question ) || empty( $answer ) ) {
@@ -182,6 +182,7 @@ function fsm_faq_render_divi_markup( $items ) {
 
 /**
  * Build generic accordion markup (W3Schools-style). No schema; caller adds it.
+ * Each question wraps in .fsm-faq-accordion__item (button + panel) for card chrome.
  *
  * Answer content is run through the_content so all WYSIWYG formatting (paragraphs,
  * lists, bold, links, etc.) and special characters (e.g. smart apostrophes) output
@@ -208,11 +209,13 @@ function fsm_faq_render_generic_markup( $items ) {
 		$answer_content = str_replace( "'", '&#39;', $answer_content );
 		$btn_id   = $block_id . '-btn-' . $index;
 		$panel_id = $block_id . '-panel-' . $index;
+		$html    .= '<div class="fsm-faq-accordion__item">';
 		$html    .= '<button type="button" id="' . esc_attr( $btn_id ) . '" class="fsm-faq-accordion__btn" aria-expanded="false" aria-controls="' . esc_attr( $panel_id ) . '">';
 		$html    .= '<h3 class="fsm-faq-accordion__title">' . esc_html( $item['question'] ) . '</h3>';
 		$html    .= '</button>';
 		$html    .= '<div id="' . esc_attr( $panel_id ) . '" class="fsm-faq-accordion__panel" role="region" aria-labelledby="' . esc_attr( $btn_id ) . '">';
 		$html    .= '<div class="fsm-faq-accordion__panel-inner">' . wp_kses_post( $answer_content ) . '</div>';
+		$html    .= '</div>';
 		$html    .= '</div>';
 		$index++;
 	}
