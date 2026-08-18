@@ -25,19 +25,17 @@ function fsm_faq_get_default_settings() {
 	$is_divi = function_exists( 'fsm_faq_is_divi_active' ) ? fsm_faq_is_divi_active() : false;
 
 	return array(
-		'header_bg'           => '#f4f4f4',
-		'header_text'         => '#333333',
-		'header_bg_hover'     => '#e8e8e8',
-		'header_bg_active'    => '#e0e0e0',
-		'panel_bg'            => '#ffffff',
-		'icon_color'          => '#666666',
-		'icon_library'        => $is_divi ? 'et_modules' : 'svg',
-		'icon_pair'           => 'plus_minus',
-		'first_open'          => '1',
-		'allow_multiple_open' => '0',
-		'border_radius'       => 0,
-		'item_spacing'        => 0,
-		'schema_mode'         => 'shortcode',
+		'toggle_bg'       => '#f4f4f4',
+		'toggle_bg_hover' => '#e8e8e8',
+		'toggle_bg_open'  => '#e0e0e0',
+		'toggle_text'     => '#333333',
+		'icon_color'      => '#666666',
+		'icon_library'    => $is_divi ? 'et_modules' : 'svg',
+		'icon_pair'       => 'plus_minus',
+		'first_open'      => '1',
+		'border_radius'   => 0,
+		'item_spacing'    => 0,
+		'schema_mode'     => 'shortcode',
 	);
 }
 
@@ -161,7 +159,7 @@ function fsm_faq_sanitize_settings( $input ) {
 	$input    = is_array( $input ) ? $input : array();
 	$clean    = array();
 
-	$color_keys = array( 'header_bg', 'header_text', 'header_bg_hover', 'header_bg_active', 'panel_bg', 'icon_color' );
+	$color_keys = array( 'toggle_bg', 'toggle_bg_hover', 'toggle_bg_open', 'toggle_text', 'icon_color' );
 	foreach ( $color_keys as $key ) {
 		$value        = isset( $input[ $key ] ) ? sanitize_hex_color( $input[ $key ] ) : '';
 		$clean[ $key ] = $value ? $value : $defaults[ $key ];
@@ -179,8 +177,7 @@ function fsm_faq_sanitize_settings( $input ) {
 		? $input['schema_mode']
 		: $defaults['schema_mode'];
 
-	$clean['first_open']          = empty( $input['first_open'] ) ? '0' : '1';
-	$clean['allow_multiple_open'] = empty( $input['allow_multiple_open'] ) ? '0' : '1';
+	$clean['first_open'] = empty( $input['first_open'] ) ? '0' : '1';
 
 	$clean['border_radius'] = isset( $input['border_radius'] ) ? min( 100, absint( $input['border_radius'] ) ) : $defaults['border_radius'];
 	$clean['item_spacing']  = isset( $input['item_spacing'] ) ? min( 100, absint( $input['item_spacing'] ) ) : $defaults['item_spacing'];
@@ -237,16 +234,15 @@ function fsm_faq_render_settings_page() {
 			<?php settings_fields( 'fsm_faq_settings_group' ); ?>
 
 			<h2 class="title"><?php echo esc_html__( 'Brand Colors', 'fsm-faq' ); ?></h2>
-			<p class="description"><?php echo esc_html__( 'Applied to both the Divi toggle markup and the generic accordion.', 'fsm-faq' ); ?></p>
+			<p class="description"><?php echo esc_html__( 'Applied to both the Divi toggle markup and the generic accordion. The question and its answer share one background so each toggle reads as a single connected unit.', 'fsm-faq' ); ?></p>
 			<table class="form-table" role="presentation">
 				<?php
 				$color_fields = array(
-					'header_bg'        => __( 'Question background', 'fsm-faq' ),
-					'header_text'      => __( 'Question text', 'fsm-faq' ),
-					'header_bg_hover'  => __( 'Question background (hover)', 'fsm-faq' ),
-					'header_bg_active' => __( 'Question background (open)', 'fsm-faq' ),
-					'panel_bg'         => __( 'Answer background', 'fsm-faq' ),
-					'icon_color'       => __( 'Toggle icon color', 'fsm-faq' ),
+					'toggle_bg'       => __( 'Toggle background (closed)', 'fsm-faq' ),
+					'toggle_bg_hover' => __( 'Toggle background (hover)', 'fsm-faq' ),
+					'toggle_bg_open'  => __( 'Toggle background (open)', 'fsm-faq' ),
+					'toggle_text'     => __( 'Question text', 'fsm-faq' ),
+					'icon_color'      => __( 'Toggle icon color', 'fsm-faq' ),
 				);
 				foreach ( $color_fields as $key => $label ) :
 					?>
@@ -300,15 +296,6 @@ function fsm_faq_render_settings_page() {
 						<label>
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[first_open]" value="1" <?php checked( $s['first_open'], '1' ); ?> />
 							<?php echo esc_html__( 'Open the first FAQ by default', 'fsm-faq' ); ?>
-						</label>
-					</td>
-				</tr>
-				<tr>
-					<th scope="row"><?php echo esc_html__( 'Multiple open', 'fsm-faq' ); ?></th>
-					<td>
-						<label>
-							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_multiple_open]" value="1" <?php checked( $s['allow_multiple_open'], '1' ); ?> />
-							<?php echo esc_html__( 'Allow multiple FAQs open at once (generic accordion only)', 'fsm-faq' ); ?>
 						</label>
 					</td>
 				</tr>
@@ -521,12 +508,11 @@ function fsm_faq_build_generic_color_css( $s ) {
 	$spacing = (int) $s['item_spacing'];
 
 	$vars = sprintf(
-		'.fsm-faq-accordion{--fsm-faq-header-bg:%1$s;--fsm-faq-header-text:%2$s;--fsm-faq-header-bg-hover:%3$s;--fsm-faq-header-bg-active:%4$s;--fsm-faq-panel-bg:%5$s;--fsm-faq-icon-color:%6$s;--fsm-faq-radius:%7$dpx;}',
-		fsm_faq_css_hex( $s['header_bg'] ),
-		fsm_faq_css_hex( $s['header_text'] ),
-		fsm_faq_css_hex( $s['header_bg_hover'] ),
-		fsm_faq_css_hex( $s['header_bg_active'] ),
-		fsm_faq_css_hex( $s['panel_bg'] ),
+		'.fsm-faq-accordion{--fsm-faq-toggle-bg:%1$s;--fsm-faq-toggle-bg-hover:%2$s;--fsm-faq-toggle-bg-open:%3$s;--fsm-faq-toggle-text:%4$s;--fsm-faq-icon-color:%5$s;--fsm-faq-radius:%6$dpx;}',
+		fsm_faq_css_hex( $s['toggle_bg'] ),
+		fsm_faq_css_hex( $s['toggle_bg_hover'] ),
+		fsm_faq_css_hex( $s['toggle_bg_open'] ),
+		fsm_faq_css_hex( $s['toggle_text'] ),
 		fsm_faq_css_hex( $s['icon_color'] ),
 		$radius
 	);
@@ -599,11 +585,13 @@ function fsm_faq_build_divi_color_css( $s ) {
 	$radius  = (int) $s['border_radius'];
 	$spacing = (int) $s['item_spacing'];
 
-	$css  = sprintf( '.fsm-faq-divi .et_pb_toggle{background-color:%s;}', fsm_faq_css_hex( $s['header_bg'] ) );
-	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle.et_pb_toggle_open{background-color:%s;}', fsm_faq_css_hex( $s['header_bg_active'] ) );
-	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title{color:%s;}', fsm_faq_css_hex( $s['header_text'] ) );
-	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title:hover{background-color:%s;}', fsm_faq_css_hex( $s['header_bg_hover'] ) );
-	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_content{background-color:%s;}', fsm_faq_css_hex( $s['panel_bg'] ) );
+	// Background sits on the toggle wrapper so the question and its answer read as one
+	// unit; the content area stays transparent so it inherits that background.
+	$css  = sprintf( '.fsm-faq-divi .et_pb_toggle{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg'] ) );
+	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle:not(.et_pb_toggle_open):hover{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_hover'] ) );
+	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle.et_pb_toggle_open{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_open'] ) );
+	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title{color:%s;}', fsm_faq_css_hex( $s['toggle_text'] ) );
+	$css .= '.fsm-faq-divi .et_pb_toggle_content{background-color:transparent;}';
 
 	if ( $radius > 0 ) {
 		$css .= sprintf( '.fsm-faq-divi .et_pb_toggle{border-radius:%dpx;overflow:hidden;}', $radius );

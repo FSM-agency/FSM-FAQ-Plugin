@@ -219,12 +219,11 @@ function fsm_faq_render_generic_markup( $items ) {
 		return '';
 	}
 
-	$settings       = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_multiple_open' => '0' );
-	$first_open     = empty( $settings['first_open'] ) ? '0' : '1';
-	$allow_multiple = empty( $settings['allow_multiple_open'] ) ? '0' : '1';
+	$settings   = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1' );
+	$first_open = empty( $settings['first_open'] ) ? '0' : '1';
 
 	$block_id = 'fsm-faq-' . uniqid();
-	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '" data-allow-multiple="' . esc_attr( $allow_multiple ) . '">';
+	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '">';
 	$index   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );

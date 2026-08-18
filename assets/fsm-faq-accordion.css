@@ -9,11 +9,10 @@
 	width: 100%;
 	max-width: 100%;
 	/* Defaults; overridden by the plugin Settings page via inline custom properties. */
-	--fsm-faq-header-bg: #f4f4f4;
-	--fsm-faq-header-text: #333333;
-	--fsm-faq-header-bg-hover: #e8e8e8;
-	--fsm-faq-header-bg-active: #e0e0e0;
-	--fsm-faq-panel-bg: #ffffff;
+	--fsm-faq-toggle-bg: #f4f4f4;
+	--fsm-faq-toggle-bg-hover: #e8e8e8;
+	--fsm-faq-toggle-bg-open: #e0e0e0;
+	--fsm-faq-toggle-text: #333333;
 	--fsm-faq-icon-color: #666666;
 	--fsm-faq-radius: 0px;
 }
@@ -26,8 +25,8 @@
 	font-size: 1rem;
 	line-height: 1.4;
 	font-weight: 600;
-	color: var(--fsm-faq-header-text);
-	background-color: var(--fsm-faq-header-bg);
+	color: var(--fsm-faq-toggle-text);
+	background-color: var(--fsm-faq-toggle-bg);
 	cursor: pointer;
 	outline: none;
 	transition: background-color 0.2s ease, color 0.2s ease;
@@ -37,8 +36,8 @@
 
 .fsm-faq-accordion__btn:hover,
 .fsm-faq-accordion__btn:focus {
-	background-color: var(--fsm-faq-header-bg-hover);
-	color: var(--fsm-faq-header-text);
+	background-color: var(--fsm-faq-toggle-bg-hover);
+	color: var(--fsm-faq-toggle-text);
 }
 
 /* Question heading – scoped for styling */
@@ -73,21 +72,18 @@
 	content: '\02796'; /* Unicode minus (-) fallback */
 }
 
-/* Active (open) state */
-.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active {
-	background-color: var(--fsm-faq-header-bg-active);
-	color: var(--fsm-faq-header-text);
-}
-
+/* Active (open) state – question and answer share this background */
+.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active,
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
-	background-color: var(--fsm-faq-header-bg-active);
+	background-color: var(--fsm-faq-toggle-bg-open);
+	color: var(--fsm-faq-toggle-text);
 }
 
-/* Panel (answer) – hidden by default */
+/* Panel (answer) – hidden by default; matches the open background */
 .fsm-faq-accordion__panel {
 	padding: 0 1.25em;
-	background-color: var(--fsm-faq-panel-bg);
+	background-color: var(--fsm-faq-toggle-bg-open);
 	max-height: 0;
 	overflow: hidden;
 	transition: max-height 0.25s ease-out;
