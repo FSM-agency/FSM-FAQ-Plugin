@@ -27,7 +27,8 @@ A no-code settings page (FAQs -> Settings, requires manage_options) controls dis
 
 * **Brand colors** – Toggle background (closed), toggle background (hover), toggle background (open), question text, and toggle icon color. Applied to both the Divi toggle markup and the generic accordion. The question and its answer share one background so each toggle reads as a single connected unit.
 * **Toggle icon** – Choose an icon library (ET Modules built-in Divi font, Font Awesome, or bundled SVG) and an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon). Font Awesome is loaded from a CDN only when selected (filterable via `fsm_faq_fontawesome_url`); SVG uses lightweight icons bundled with the plugin.
-* **Behavior** – Open the first FAQ by default (Divi + generic), corner radius, and spacing between items. Only one FAQ is open at a time.
+* **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
+* **Layout & behavior** – Open the first FAQ by default (Divi + generic) and spacing between items. Only one FAQ is open at a time.
 * **Structured data** – See below.
 
 Changing settings automatically invalidates the FAQ output cache.
@@ -85,7 +86,7 @@ To push this plugin to GitHub and have all sites receive update notifications:
 == Changelog ==
 
 = 1.1.0 =
-* New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, first-open behavior, corner radius, and item spacing.
+* New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, border thickness/color, first-open behavior, corner radius, and item spacing.
 * New: Toggle icon libraries – ET Modules (Divi font), Font Awesome, and bundled SVG – applied to both Divi and generic accordion markup.
 * New: Native drag-and-drop ordering on the All FAQs screen (menu_order); ACF "Page FAQs" relationship order takes precedence per page.
 * New: FAQ schema output modes – inline JSON-LD (default), merge into Yoast/Rank Math/All in One SEO graph, or off.

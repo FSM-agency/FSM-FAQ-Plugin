@@ -30,6 +30,8 @@ function fsm_faq_get_default_settings() {
 		'toggle_bg_open'  => '#e0e0e0',
 		'toggle_text'     => '#333333',
 		'icon_color'      => '#666666',
+		'border_color'    => '#cccccc',
+		'border_width'    => 0,
 		'icon_library'    => $is_divi ? 'et_modules' : 'svg',
 		'icon_pair'       => 'plus_minus',
 		'first_open'      => '1',
@@ -159,7 +161,7 @@ function fsm_faq_sanitize_settings( $input ) {
 	$input    = is_array( $input ) ? $input : array();
 	$clean    = array();
 
-	$color_keys = array( 'toggle_bg', 'toggle_bg_hover', 'toggle_bg_open', 'toggle_text', 'icon_color' );
+	$color_keys = array( 'toggle_bg', 'toggle_bg_hover', 'toggle_bg_open', 'toggle_text', 'icon_color', 'border_color' );
 	foreach ( $color_keys as $key ) {
 		$value        = isset( $input[ $key ] ) ? sanitize_hex_color( $input[ $key ] ) : '';
 		$clean[ $key ] = $value ? $value : $defaults[ $key ];
@@ -181,6 +183,7 @@ function fsm_faq_sanitize_settings( $input ) {
 
 	$clean['border_radius'] = isset( $input['border_radius'] ) ? min( 100, absint( $input['border_radius'] ) ) : $defaults['border_radius'];
 	$clean['item_spacing']  = isset( $input['item_spacing'] ) ? min( 100, absint( $input['item_spacing'] ) ) : $defaults['item_spacing'];
+	$clean['border_width']  = isset( $input['border_width'] ) ? min( 20, absint( $input['border_width'] ) ) : $defaults['border_width'];
 
 	return $clean;
 }
@@ -288,7 +291,36 @@ function fsm_faq_render_settings_page() {
 				</tr>
 			</table>
 
-			<h2 class="title"><?php echo esc_html__( 'Behavior', 'fsm-faq' ); ?></h2>
+			<h2 class="title"><?php echo esc_html__( 'Border &amp; Shape', 'fsm-faq' ); ?></h2>
+			<p class="description"><?php echo esc_html__( 'The border wraps the entire toggle, enclosing the question and its answer together.', 'fsm-faq' ); ?></p>
+			<table class="form-table" role="presentation">
+				<tr>
+					<th scope="row"><label for="fsm-faq-border_width"><?php echo esc_html__( 'Border thickness (px)', 'fsm-faq' ); ?></label></th>
+					<td>
+						<input type="number" min="0" max="20" step="1" id="fsm-faq-border_width" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[border_width]" value="<?php echo esc_attr( $s['border_width'] ); ?>" class="small-text" />
+						<p class="description"><?php echo esc_html__( 'Set to 0 for no border. When 0, any border from your theme is left untouched.', 'fsm-faq' ); ?></p>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="fsm-faq-border_color"><?php echo esc_html__( 'Border color', 'fsm-faq' ); ?></label></th>
+					<td>
+						<input
+							type="text"
+							class="fsm-faq-color-field"
+							id="fsm-faq-border_color"
+							name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION . '[border_color]' ); ?>"
+							value="<?php echo esc_attr( $s['border_color'] ); ?>"
+							data-default-color="<?php echo esc_attr( fsm_faq_get_default_settings()['border_color'] ); ?>"
+						/>
+					</td>
+				</tr>
+				<tr>
+					<th scope="row"><label for="fsm-faq-border_radius"><?php echo esc_html__( 'Corner radius (px)', 'fsm-faq' ); ?></label></th>
+					<td><input type="number" min="0" max="100" step="1" id="fsm-faq-border_radius" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[border_radius]" value="<?php echo esc_attr( $s['border_radius'] ); ?>" class="small-text" /></td>
+				</tr>
+			</table>
+
+			<h2 class="title"><?php echo esc_html__( 'Layout &amp; Behavior', 'fsm-faq' ); ?></h2>
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><?php echo esc_html__( 'First item', 'fsm-faq' ); ?></th>
@@ -298,10 +330,6 @@ function fsm_faq_render_settings_page() {
 							<?php echo esc_html__( 'Open the first FAQ by default', 'fsm-faq' ); ?>
 						</label>
 					</td>
-				</tr>
-				<tr>
-					<th scope="row"><label for="fsm-faq-border_radius"><?php echo esc_html__( 'Corner radius (px)', 'fsm-faq' ); ?></label></th>
-					<td><input type="number" min="0" max="100" step="1" id="fsm-faq-border_radius" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[border_radius]" value="<?php echo esc_attr( $s['border_radius'] ); ?>" class="small-text" /></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="fsm-faq-item_spacing"><?php echo esc_html__( 'Spacing between items (px)', 'fsm-faq' ); ?></label></th>
@@ -508,21 +536,20 @@ function fsm_faq_build_generic_color_css( $s ) {
 	$spacing = (int) $s['item_spacing'];
 
 	$vars = sprintf(
-		'.fsm-faq-accordion{--fsm-faq-toggle-bg:%1$s;--fsm-faq-toggle-bg-hover:%2$s;--fsm-faq-toggle-bg-open:%3$s;--fsm-faq-toggle-text:%4$s;--fsm-faq-icon-color:%5$s;--fsm-faq-radius:%6$dpx;}',
+		'.fsm-faq-accordion{--fsm-faq-toggle-bg:%1$s;--fsm-faq-toggle-bg-hover:%2$s;--fsm-faq-toggle-bg-open:%3$s;--fsm-faq-toggle-text:%4$s;--fsm-faq-icon-color:%5$s;--fsm-faq-radius:%6$dpx;--fsm-faq-border-width:%7$dpx;--fsm-faq-border-color:%8$s;}',
 		fsm_faq_css_hex( $s['toggle_bg'] ),
 		fsm_faq_css_hex( $s['toggle_bg_hover'] ),
 		fsm_faq_css_hex( $s['toggle_bg_open'] ),
 		fsm_faq_css_hex( $s['toggle_text'] ),
 		fsm_faq_css_hex( $s['icon_color'] ),
-		$radius
+		$radius,
+		(int) $s['border_width'],
+		fsm_faq_css_hex( $s['border_color'] )
 	);
 
 	$css = $vars;
 	if ( $spacing > 0 ) {
 		$css .= sprintf( '.fsm-faq-accordion .fsm-faq-accordion__item{margin-bottom:%dpx;}', $spacing );
-	}
-	if ( $radius > 0 ) {
-		$css .= '.fsm-faq-accordion .fsm-faq-accordion__item{overflow:hidden;border-radius:var(--fsm-faq-radius);}';
 	}
 	return $css;
 }
@@ -592,6 +619,13 @@ function fsm_faq_build_divi_color_css( $s ) {
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle.et_pb_toggle_open{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_open'] ) );
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title{color:%s;}', fsm_faq_css_hex( $s['toggle_text'] ) );
 	$css .= '.fsm-faq-divi .et_pb_toggle_content{background-color:transparent;}';
+
+	// Border wraps the whole toggle (question + answer). Skipped at 0 so an existing
+	// theme border is left alone rather than silently removed.
+	$border_width = (int) $s['border_width'];
+	if ( $border_width > 0 ) {
+		$css .= sprintf( '.fsm-faq-divi .et_pb_toggle{border:%dpx solid %s;}', $border_width, fsm_faq_css_hex( $s['border_color'] ) );
+	}
 
 	if ( $radius > 0 ) {
 		$css .= sprintf( '.fsm-faq-divi .et_pb_toggle{border-radius:%dpx;overflow:hidden;}', $radius );

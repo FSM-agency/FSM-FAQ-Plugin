@@ -15,6 +15,18 @@
 	--fsm-faq-toggle-text: #333333;
 	--fsm-faq-icon-color: #666666;
 	--fsm-faq-radius: 0px;
+	--fsm-faq-border-width: 0px;
+	--fsm-faq-border-color: transparent;
+}
+
+/*
+ * Toggle item – wraps the question and its answer as one unit, so the border and
+ * radius enclose both. overflow:hidden keeps the panel inside the rounded corners.
+ */
+.fsm-faq-accordion__item {
+	border: var(--fsm-faq-border-width) solid var(--fsm-faq-border-color);
+	border-radius: var(--fsm-faq-radius);
+	overflow: hidden;
 }
 
 /* Accordion button (question) */
