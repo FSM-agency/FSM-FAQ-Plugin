@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FSM FAQ
  * Description: Custom FAQ post type with ACF fields, page assignment, and [fsm_display_faqs] shortcode. Requires Advanced Custom Fields Pro.
- * Version: 1.0.5
+ * Version: 1.1.0
  * Author: Full Spectrum Marketing
  * Author URI: https://fsm.agency
  * Text Domain: fsm-faq
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'FSM_FAQ_VERSION', '1.0.5' );
+define( 'FSM_FAQ_VERSION', '1.1.0' );
 define( 'FSM_FAQ_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
@@ -41,7 +41,10 @@ function fsm_faq_bootstrap() {
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-cpt.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-acf-fields.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-admin.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-settings.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-schema.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-shortcode.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-order.php';
 }
 
 function fsm_faq_acf_required_notice() {

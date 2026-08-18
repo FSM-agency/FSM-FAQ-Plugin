@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.0.5
+Stable tag: 1.1.0
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -20,6 +20,32 @@ Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For 
 * Admin list column: "Assigned to Pages" with links.
 
 Use a parent section with class `faq-section` and Divi visibility based on custom field `_has_faqs` so the section is hidden when the page has no FAQs.
+
+== Settings (FAQs -> Settings) ==
+
+A no-code settings page (FAQs -> Settings, requires manage_options) controls display without touching the theme:
+
+* **Brand colors** – Question background, question text, hover/open backgrounds, answer background, and toggle icon color. Applied to both the Divi toggle markup and the generic accordion.
+* **Toggle icon** – Choose an icon library (ET Modules built-in Divi font, Font Awesome, or bundled SVG) and an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon). Font Awesome is loaded from a CDN only when selected (filterable via `fsm_faq_fontawesome_url`); SVG uses lightweight icons bundled with the plugin.
+* **Behavior** – Open the first FAQ by default (Divi + generic), allow multiple open at once (generic accordion only), corner radius, and spacing between items.
+* **Structured data** – See below.
+
+Changing settings automatically invalidates the FAQ output cache.
+
+== FAQ ordering ==
+
+* **Global order** – Drag-and-drop the rows on the All FAQs screen to set the default order (stored in menu_order). No extra plugin (e.g. Intuitive/Simple Custom Post Order) is required. Ordering is disabled while searching or filtering the list.
+* **Per-page order** – When a page's ACF "Page FAQs" relationship is populated, its editor-defined order takes precedence for that page. Otherwise the global drag-and-drop order is used.
+
+== Structured data / SEO plugin schema ==
+
+The "FAQ schema output" setting controls FAQPage JSON-LD:
+
+* **Output from this plugin (default)** – Inline FAQPage JSON-LD after the FAQ markup, matching exactly what is rendered.
+* **Merge into active SEO plugin schema graph** – Injects FAQ entities into Yoast SEO, Rank Math, or All in One SEO instead of emitting inline JSON-LD. Falls back to plugin output if no supported SEO plugin is active.
+* **Do not output FAQ schema** – For sites that manage FAQ schema elsewhere.
+
+Output only one FAQ schema per page. If a page also uses an SEO plugin's own FAQ block, set this to "Do not output" (or remove the block) to avoid duplicate-schema warnings.
 
 == Installation ==
 
@@ -57,6 +83,13 @@ To push this plugin to GitHub and have all sites receive update notifications:
    Sites will show "Update available" and can update with one click.
 
 == Changelog ==
+
+= 1.1.0 =
+* New: Settings page (FAQs -> Settings) for brand colors, toggle icon library/style, first-open and multiple-open behavior, corner radius, and item spacing.
+* New: Toggle icon libraries – ET Modules (Divi font), Font Awesome, and bundled SVG – applied to both Divi and generic accordion markup.
+* New: Native drag-and-drop ordering on the All FAQs screen (menu_order); ACF "Page FAQs" relationship order takes precedence per page.
+* New: FAQ schema output modes – inline JSON-LD (default), merge into Yoast/Rank Math/All in One SEO graph, or off.
+* Improvement: FAQ output cache now busts on content, order, and settings changes.
 
 = 1.0.5 =
 * Normalize typographic apostrophes in FAQ question titles (same as answers) so titles display correctly with Divi and other processors.
