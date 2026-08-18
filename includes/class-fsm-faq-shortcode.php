@@ -181,10 +181,11 @@ function fsm_faq_render_divi_markup( $items ) {
 		return '';
 	}
 
-	$settings   = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1' );
-	$first_open = ! empty( $settings['first_open'] );
+	$settings    = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_close' => '1' );
+	$first_open  = ! empty( $settings['first_open'] );
+	$allow_close = empty( $settings['allow_close'] ) ? '0' : '1';
 
-	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left">';
+	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$i   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );
@@ -219,11 +220,12 @@ function fsm_faq_render_generic_markup( $items ) {
 		return '';
 	}
 
-	$settings   = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1' );
-	$first_open = empty( $settings['first_open'] ) ? '0' : '1';
+	$settings    = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_close' => '1' );
+	$first_open  = empty( $settings['first_open'] ) ? '0' : '1';
+	$allow_close = empty( $settings['allow_close'] ) ? '0' : '1';
 
 	$block_id = 'fsm-faq-' . uniqid();
-	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '">';
+	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$index   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );

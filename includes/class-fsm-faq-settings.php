@@ -35,6 +35,7 @@ function fsm_faq_get_default_settings() {
 		'icon_library'    => $is_divi ? 'et_modules' : 'svg',
 		'icon_pair'       => 'plus_minus',
 		'first_open'      => '1',
+		'allow_close'     => '1',
 		'border_radius'   => 0,
 		'item_spacing'    => 0,
 		'schema_mode'     => 'shortcode',
@@ -179,7 +180,8 @@ function fsm_faq_sanitize_settings( $input ) {
 		? $input['schema_mode']
 		: $defaults['schema_mode'];
 
-	$clean['first_open'] = empty( $input['first_open'] ) ? '0' : '1';
+	$clean['first_open']  = empty( $input['first_open'] ) ? '0' : '1';
+	$clean['allow_close'] = empty( $input['allow_close'] ) ? '0' : '1';
 
 	$clean['border_radius'] = isset( $input['border_radius'] ) ? min( 100, absint( $input['border_radius'] ) ) : $defaults['border_radius'];
 	$clean['item_spacing']  = isset( $input['item_spacing'] ) ? min( 100, absint( $input['item_spacing'] ) ) : $defaults['item_spacing'];
@@ -332,6 +334,16 @@ function fsm_faq_render_settings_page() {
 					</td>
 				</tr>
 				<tr>
+					<th scope="row"><?php echo esc_html__( 'Closing', 'fsm-faq' ); ?></th>
+					<td>
+						<label>
+							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
+							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
+						</label>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked.', 'fsm-faq' ); ?></p>
+					</td>
+				</tr>
+				<tr>
 					<th scope="row"><label for="fsm-faq-item_spacing"><?php echo esc_html__( 'Spacing between items (px)', 'fsm-faq' ); ?></label></th>
 					<td><input type="number" min="0" max="100" step="1" id="fsm-faq-item_spacing" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[item_spacing]" value="<?php echo esc_attr( $s['item_spacing'] ); ?>" class="small-text" /></td>
 				</tr>
@@ -474,6 +486,18 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 			wp_add_inline_style( 'fsm-faq-accordion', $css );
 		}
 		return;
+	}
+
+	// Divi's accordion script ignores clicks on an already-open toggle, so closing
+	// support needs this small add-on script.
+	if ( ! empty( $settings['allow_close'] ) ) {
+		wp_enqueue_script(
+			'fsm-faq-divi-toggle',
+			$base_url . 'fsm-faq-divi-toggle.js',
+			array( 'jquery' ),
+			FSM_FAQ_VERSION,
+			true
+		);
 	}
 
 	// Divi context: inline-only style handle.

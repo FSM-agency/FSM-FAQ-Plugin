@@ -2,9 +2,10 @@
  * FSM FAQ – Generic accordion toggle (theme-agnostic fallback).
  * Uses W3Schools-style pattern: button + panel, toggle .active and maxHeight.
  *
- * Only one panel is open at a time. Behavior is controlled per-container via a data
- * attribute set by the shortcode:
- * - data-first-open="1|0"  Open the first panel on load.
+ * Only one panel is open at a time. Behavior is controlled per-container via data
+ * attributes set by the shortcode:
+ * - data-first-open="1|0"   Open the first panel on load.
+ * - data-allow-close="1|0"  Allow clicking an open panel to close it.
  *
  * @see https://www.w3schools.com/howto/howto_js_accordion.asp
  * @since 1.1.0
@@ -38,6 +39,7 @@
 		var containers = document.querySelectorAll(CONTAINER_SELECTOR);
 		containers.forEach(function (container) {
 			var firstOpen = container.getAttribute('data-first-open') !== '0';
+			var allowClose = container.getAttribute('data-allow-close') !== '0';
 			var buttons = container.querySelectorAll(BTN_SELECTOR);
 			var panels = container.querySelectorAll(PANEL_SELECTOR);
 
@@ -50,20 +52,22 @@
 					btn.setAttribute('aria-expanded', 'false');
 				}
 				btn.addEventListener('click', function () {
-					togglePanel(container, btn);
+					togglePanel(container, btn, allowClose);
 				});
 			});
 		});
 	}
 
-	function togglePanel(container, clickedBtn) {
+	function togglePanel(container, clickedBtn, allowClose) {
 		var isActive = clickedBtn.classList.contains(ACTIVE_CLASS);
 		var panels = container.querySelectorAll(PANEL_SELECTOR);
 		var buttons = container.querySelectorAll(BTN_SELECTOR);
 		var clickedIndex = Array.prototype.indexOf.call(buttons, clickedBtn);
 
 		if (isActive) {
-			closePanel(clickedBtn, panels[clickedIndex]);
+			if (allowClose) {
+				closePanel(clickedBtn, panels[clickedIndex]);
+			}
 			return;
 		}
 
