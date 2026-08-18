@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -87,7 +87,7 @@ To push this plugin to GitHub and have all sites receive update notifications:
 
 == Changelog ==
 
-= 1.1.1 =
+= 1.1.2 =
 * New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, border thickness/color, first-open behavior, corner radius, and item spacing.
 * New: Toggle icon libraries – ET Modules (Divi font), Font Awesome, and bundled SVG – applied to both Divi and generic accordion markup.
 * New: Open FAQs can be closed by clicking them again (setting, enabled by default), including on the Divi toggle markup where Divi normally prevents it.
