@@ -8,6 +8,14 @@
 .fsm-faq-accordion {
 	width: 100%;
 	max-width: 100%;
+	/* Defaults; overridden by the plugin Settings page via inline custom properties. */
+	--fsm-faq-header-bg: #f4f4f4;
+	--fsm-faq-header-text: #333333;
+	--fsm-faq-header-bg-hover: #e8e8e8;
+	--fsm-faq-header-bg-active: #e0e0e0;
+	--fsm-faq-panel-bg: #ffffff;
+	--fsm-faq-icon-color: #666666;
+	--fsm-faq-radius: 0px;
 }
 
 /* Accordion button (question) */
@@ -18,8 +26,8 @@
 	font-size: 1rem;
 	line-height: 1.4;
 	font-weight: 600;
-	color: #333;
-	background-color: #f4f4f4;
+	color: var(--fsm-faq-header-text);
+	background-color: var(--fsm-faq-header-bg);
 	cursor: pointer;
 	outline: none;
 	transition: background-color 0.2s ease, color 0.2s ease;
@@ -29,8 +37,8 @@
 
 .fsm-faq-accordion__btn:hover,
 .fsm-faq-accordion__btn:focus {
-	background-color: #e8e8e8;
-	color: #111;
+	background-color: var(--fsm-faq-header-bg-hover);
+	color: var(--fsm-faq-header-text);
 }
 
 /* Question heading – scoped for styling */
@@ -43,9 +51,13 @@
 	color: inherit;
 }
 
-/* Plus/minus icon via pseudo-element */
+/*
+ * Toggle icon via pseudo-element. The content/font/mask are supplied by the
+ * plugin Settings engine (inline CSS); these are safe fallbacks for when no
+ * icon library override is present.
+ */
 .fsm-faq-accordion__btn::after {
-	content: '\02795'; /* Unicode plus (+) */
+	content: '\02795'; /* Unicode plus (+) fallback */
 	display: inline-block;
 	position: absolute;
 	right: 1.25em;
@@ -53,29 +65,29 @@
 	transform: translateY(-50%);
 	font-size: 0.85em;
 	line-height: 1;
-	color: #666;
+	color: var(--fsm-faq-icon-color);
 	transition: color 0.2s ease;
 }
 
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
-	content: '\02796'; /* Unicode minus (-) */
+	content: '\02796'; /* Unicode minus (-) fallback */
 }
 
 /* Active (open) state */
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active {
-	background-color: #e0e0e0;
-	color: #111;
+	background-color: var(--fsm-faq-header-bg-active);
+	color: var(--fsm-faq-header-text);
 }
 
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
-	background-color: #d8d8d8;
+	background-color: var(--fsm-faq-header-bg-active);
 }
 
 /* Panel (answer) – hidden by default */
 .fsm-faq-accordion__panel {
 	padding: 0 1.25em;
-	background-color: #fff;
+	background-color: var(--fsm-faq-panel-bg);
 	max-height: 0;
 	overflow: hidden;
 	transition: max-height 0.25s ease-out;

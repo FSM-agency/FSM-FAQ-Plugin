@@ -68,22 +68,41 @@ function fsm_faq_get_faq_data( $post_id ) {
 		return $result;
 	}
 
-	$args = array(
-		'post_type'               => 'faq',
-		'posts_per_page'          => -1,
-		'meta_query'              => array(
-			array(
-				'key'     => 'display_on_pages',
-				'value'   => '"' . absint( $post_id ) . '"',
-				'compare' => 'LIKE',
+	// Per-page order: when the page's ACF "Page FAQs" relationship is populated, use
+	// that editor-defined order. Otherwise fall back to the global menu_order set via
+	// the FAQ list drag-and-drop.
+	$ordered_ids = get_field( 'page_faqs', $post_id );
+	$ordered_ids = ( is_array( $ordered_ids ) ) ? array_values( array_filter( array_map( 'absint', $ordered_ids ) ) ) : array();
+
+	if ( ! empty( $ordered_ids ) ) {
+		$args = array(
+			'post_type'               => 'faq',
+			'posts_per_page'          => -1,
+			'post__in'                => $ordered_ids,
+			'orderby'                 => 'post__in',
+			'post_status'             => 'publish',
+			'no_found_rows'           => true,
+			'update_post_meta_cache'  => false,
+			'update_post_term_cache'  => false,
+		);
+	} else {
+		$args = array(
+			'post_type'               => 'faq',
+			'posts_per_page'          => -1,
+			'meta_query'              => array(
+				array(
+					'key'     => 'display_on_pages',
+					'value'   => '"' . absint( $post_id ) . '"',
+					'compare' => 'LIKE',
+				),
 			),
-		),
-		'orderby'                 => 'menu_order',
-		'order'                   => 'ASC',
-		'no_found_rows'           => true,
-		'update_post_meta_cache'  => false,
-		'update_post_term_cache'  => false,
-	);
+			'orderby'                 => 'menu_order',
+			'order'                   => 'ASC',
+			'no_found_rows'           => true,
+			'update_post_meta_cache'  => false,
+			'update_post_term_cache'  => false,
+		);
+	}
 
 	$faq_query = new WP_Query( $args );
 
@@ -162,14 +181,17 @@ function fsm_faq_render_divi_markup( $items ) {
 		return '';
 	}
 
-	$html = '<div class="et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left">';
+	$settings   = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1' );
+	$first_open = ! empty( $settings['first_open'] );
+
+	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left">';
 	$i   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );
 		$answer_content = fsm_faq_normalize_typographic_apostrophes( $answer_content );
 		// Output apostrophe as entity so it survives any post-shortcode processing (e.g. Divi) that strips the raw character.
 		$answer_content = str_replace( "'", '&#39;', $answer_content );
-		$toggle_state_class = ( 0 === $i ) ? 'et_pb_toggle_open' : 'et_pb_toggle_close';
+		$toggle_state_class = ( 0 === $i && $first_open ) ? 'et_pb_toggle_open' : 'et_pb_toggle_close';
 		$html .= '<div class="et_pb_toggle et_pb_module et_pb_accordion_item ' . esc_attr( $toggle_state_class ) . '">';
 		$html .= '<h3 class="et_pb_toggle_title">' . esc_html( $item['question'] ) . '</h3>';
 		$html .= '<div class="et_pb_toggle_content clearfix">' . wp_kses_post( $answer_content ) . '</div>';
@@ -197,10 +219,12 @@ function fsm_faq_render_generic_markup( $items ) {
 		return '';
 	}
 
-	fsm_faq_enqueue_generic_assets();
+	$settings       = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_multiple_open' => '0' );
+	$first_open     = empty( $settings['first_open'] ) ? '0' : '1';
+	$allow_multiple = empty( $settings['allow_multiple_open'] ) ? '0' : '1';
 
 	$block_id = 'fsm-faq-' . uniqid();
-	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '">';
+	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '" data-allow-multiple="' . esc_attr( $allow_multiple ) . '">';
 	$index   = 0;
 	foreach ( $items as $item ) {
 		$answer_content = apply_filters( 'the_content', $item['answer'] );
@@ -243,7 +267,14 @@ function fsm_display_faqs_shortcode() {
 		return '';
 	}
 
-	$cache_key     = 'fsm_faqs_' . absint( $current_post_id ) . '_v' . FSM_FAQ_VERSION;
+	$use_divi = fsm_faq_is_divi_active();
+
+	// Enqueue assets on every call (including cache hits) so styling always loads.
+	if ( function_exists( 'fsm_faq_enqueue_frontend_assets' ) ) {
+		fsm_faq_enqueue_frontend_assets( $use_divi ? 'divi' : 'generic' );
+	}
+
+	$cache_key     = 'fsm_faqs_' . absint( $current_post_id ) . '_v' . fsm_faq_cache_token();
 	$cached_output = wp_cache_get( $cache_key );
 
 	if ( false !== $cached_output ) {
@@ -257,18 +288,11 @@ function fsm_display_faqs_shortcode() {
 		return '';
 	}
 
-	$use_divi = fsm_faq_is_divi_active();
-	$html     = $use_divi
+	$html = $use_divi
 		? fsm_faq_render_divi_markup( $data['items'] )
 		: fsm_faq_render_generic_markup( $data['items'] );
 
-	$schema = array(
-		'@context'   => 'https://schema.org',
-		'@type'      => 'FAQPage',
-		'mainEntity' => $data['schema_questions'],
-	);
-
-	$final_output = '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>';
+	$final_output  = fsm_faq_get_inline_schema_script( $data['schema_questions'] );
 	$final_output .= $html;
 
 	wp_cache_set( $cache_key, $final_output, '', HOUR_IN_SECONDS );
@@ -296,7 +320,12 @@ function fsm_display_generic_faqs_shortcode() {
 		return '';
 	}
 
-	$cache_key     = 'fsm_faqs_generic_' . absint( $current_post_id ) . '_v' . FSM_FAQ_VERSION;
+	// Enqueue assets on every call (including cache hits) so styling always loads.
+	if ( function_exists( 'fsm_faq_enqueue_frontend_assets' ) ) {
+		fsm_faq_enqueue_frontend_assets( 'generic' );
+	}
+
+	$cache_key     = 'fsm_faqs_generic_' . absint( $current_post_id ) . '_v' . fsm_faq_cache_token();
 	$cached_output = wp_cache_get( $cache_key );
 
 	if ( false !== $cached_output ) {
@@ -312,13 +341,7 @@ function fsm_display_generic_faqs_shortcode() {
 
 	$html = fsm_faq_render_generic_markup( $data['items'] );
 
-	$schema = array(
-		'@context'   => 'https://schema.org',
-		'@type'      => 'FAQPage',
-		'mainEntity' => $data['schema_questions'],
-	);
-
-	$final_output = '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>';
+	$final_output  = fsm_faq_get_inline_schema_script( $data['schema_questions'] );
 	$final_output .= $html;
 
 	wp_cache_set( $cache_key, $final_output, '', HOUR_IN_SECONDS );
