@@ -1,62 +1,46 @@
 /**
  * FSM FAQ – Allow open Divi toggles to be closed.
  *
- * Divi's accordion never collapses the item you click: for an accordion item it always
- * runs its "expand" path, so an open FAQ stays open. This adds that behavior.
+ * Divi's accordion always keeps one item open. Closing the currently open item is not
+ * native Divi behavior; Foundation 5.0 adds it in the child-theme WCAG kit
+ * (accessibility/js/divi-accordion-close.js). This is a scoped port of that script so
+ * sites without the kit still get the same close-on-second-click on [fsm_display_faqs].
  *
- * Two Divi implementation details make this work, and both are load-bearing:
+ * Load-bearing details (shared with the kit script):
  *
- * 1. Divi binds its click handler delegated on `body` and calls stopPropagation(), so a
- *    handler delegated on `document` would never run. This binds directly to the title
- *    elements instead, which fires at the target before the event reaches body.
- * 2. The open/close classes are swapped in the slide callback rather than immediately.
- *    Divi's expand routine bails unless the toggle has `et_pb_toggle_close`, so leaving
- *    `et_pb_toggle_open` in place until the animation ends stops Divi from re-opening
- *    the toggle we are closing.
+ * 1. Bind directly to `.et_pb_toggle_title`, not delegated on document. Divi 5 binds on
+ *    `body` and calls stopPropagation(), so a document-level handler never runs.
+ * 2. Use slideToggle(700) and swap open/close classes in the callback. Divi's expand
+ *    path bails unless the item has `et_pb_toggle_close`, so leaving `et_pb_toggle_open`
+ *    in place until the animation ends stops Divi from re-opening the item we are closing.
+ * 3. `et_pb_accordion_toggling` plus a 750ms timeout keeps this from fighting Divi's
+ *    own animation when switching items.
  *
- * Opening and switching between FAQs remain Divi's responsibility. Only one FAQ is open
- * at a time either way.
+ * Opening and switching between FAQs remain Divi's responsibility.
  *
  * @since 1.1.0
  */
-(function ($) {
-	'use strict';
+jQuery(function ($) {
+	$('.fsm-faq-divi .et_pb_toggle_title').on('click', function () {
+		var $toggle = $(this).closest('.et_pb_toggle');
+		if ($toggle.hasClass('et_pb_accordion_toggling')) {
+			return;
+		}
 
-	var WRAPPER = '.fsm-faq-divi';
-	var OPEN_CLASS = 'et_pb_toggle_open';
-	var CLOSE_CLASS = 'et_pb_toggle_close';
-	var TOGGLING_CLASS = 'et_pb_accordion_toggling';
-	var DURATION = 700; // Matches Divi's own toggle animation.
+		var $accordion = $toggle.closest('.et_pb_accordion');
+		if (!$accordion.length || $accordion.attr('data-allow-close') === '0') {
+			return;
+		}
 
-	$(function () {
-		$(WRAPPER + ' .et_pb_toggle_title').on('click', function () {
-			var $toggle = $(this).closest('.et_pb_toggle');
-			var $accordion = $toggle.closest(WRAPPER);
-
-			if (!$accordion.length || $accordion.attr('data-allow-close') === '0') {
-				return;
-			}
-
-			// Divi handles opening and switching; only a still-open toggle needs closing.
-			if (!$toggle.hasClass(OPEN_CLASS) || $accordion.hasClass(TOGGLING_CLASS)) {
-				return;
-			}
-
-			var $content = $toggle.children('.et_pb_toggle_content');
-
-			if (!$content.length || $content.is(':animated')) {
-				return;
-			}
-
-			$accordion.addClass(TOGGLING_CLASS);
-
-			$content.slideUp(DURATION, function () {
-				$toggle.removeClass(OPEN_CLASS).addClass(CLOSE_CLASS);
+		if ($toggle.hasClass('et_pb_toggle_open')) {
+			$accordion.addClass('et_pb_accordion_toggling');
+			$toggle.find('.et_pb_toggle_content').slideToggle(700, function () {
+				$toggle.removeClass('et_pb_toggle_open').addClass('et_pb_toggle_close');
 			});
+		}
 
-			setTimeout(function () {
-				$accordion.removeClass(TOGGLING_CLASS);
-			}, DURATION + 50);
-		});
+		setTimeout(function () {
+			$accordion.removeClass('et_pb_accordion_toggling');
+		}, 750);
 	});
-})(jQuery);
+});

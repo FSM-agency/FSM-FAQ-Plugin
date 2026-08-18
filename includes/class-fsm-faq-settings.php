@@ -340,7 +340,7 @@ function fsm_faq_render_settings_page() {
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
 							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
 						</label>
-						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked. On Foundation sites the WCAG kit already provides this; the plugin will not load a second copy of that script.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -488,9 +488,11 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 		return;
 	}
 
-	// Divi's accordion script ignores clicks on an already-open toggle, so closing
-	// support needs this small add-on script.
-	if ( ! empty( $settings['allow_close'] ) ) {
+	// Divi's accordion always keeps one item open. Closing is provided either by the
+	// Foundation WCAG kit (fsm-divi-accordion-close) or by this scoped port of it.
+	// Skip our copy when the kit is already loaded so both do not slideToggle the
+	// same click (which would reverse the close).
+	if ( ! empty( $settings['allow_close'] ) && ! fsm_faq_divi_close_script_already_loaded() ) {
 		wp_enqueue_script(
 			'fsm-faq-divi-toggle',
 			$base_url . 'fsm-faq-divi-toggle.js',
@@ -510,6 +512,20 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 	if ( $css ) {
 		wp_add_inline_style( $handle, $css );
 	}
+}
+
+/**
+ * True when the Foundation WCAG kit already provides Divi accordion close-on-click.
+ *
+ * That kit enqueues `fsm-divi-accordion-close` globally. Loading a second handler on
+ * the same titles would call slideToggle twice and reverse the close.
+ *
+ * @return bool
+ * @since 1.1.0
+ */
+function fsm_faq_divi_close_script_already_loaded() {
+	return wp_script_is( 'fsm-divi-accordion-close', 'enqueued' )
+		|| wp_script_is( 'fsm-divi-accordion-close', 'done' );
 }
 
 /**

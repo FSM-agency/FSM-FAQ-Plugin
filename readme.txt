@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -30,7 +30,7 @@ A no-code settings page (FAQs -> Settings, requires manage_options) controls dis
 * **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
 * **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default), and spacing between items. Only one FAQ is open at a time either way.
 
-Note: Divi's own accordion script ignores clicks on an already-open toggle, so closing support is added by a small plugin script that only loads when the setting is enabled. Unchecking the setting restores default Divi behavior, where an open toggle stays open until another is clicked.
+Note: Divi's accordion always keeps one item open. Closing the currently open item is added by this plugin (a scoped port of Foundation's `divi-accordion-close.js`) unless the WCAG kit is already loaded, in which case the plugin skips its copy so both scripts do not fire on the same click. Unchecking the setting restores default Divi behavior on sites without the kit.
 * **Structured data** – See below.
 
 Changing settings automatically invalidates the FAQ output cache.
@@ -86,6 +86,9 @@ To push this plugin to GitHub and have all sites receive update notifications:
    Sites will show "Update available" and can update with one click.
 
 == Changelog ==
+
+= 1.1.3 =
+* Fix: Divi close-on-click now matches Foundation's WCAG kit script (direct bind + slideToggle) and skips loading when that kit is already present, so the two handlers cannot reverse each other.
 
 = 1.1.2 =
 * New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, border thickness/color, first-open behavior, corner radius, and item spacing.
