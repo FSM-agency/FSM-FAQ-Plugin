@@ -91,8 +91,9 @@ function fsm_faq_get_faq_data( $post_id ) {
 	$member_ids = ( is_array( $member_ids ) ) ? array_values( array_filter( array_map( 'absint', $member_ids ) ) ) : array();
 
 	if ( ! empty( $member_ids ) ) {
-		$member_ids = array_slice( $member_ids, 0, $query_limit );
-		$args       = array(
+		// Do not slice $member_ids here: relationship order is not menu_order. WP_Query
+		// applies posts_per_page after sorting the full membership set by menu_order.
+		$args = array(
 			'post_type'              => 'faq',
 			'posts_per_page'         => $query_limit,
 			'post__in'               => $member_ids,
