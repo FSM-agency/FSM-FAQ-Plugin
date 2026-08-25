@@ -65,25 +65,16 @@ To move existing sites from the old fragmented implementation (FAQ code in theme
 4. Clear any object cache (Redis/Memcached) or wait for TTL so [fsm_display_faqs] output is fresh.
 5. Verify: edit an FAQ, edit a page, view a page that uses the shortcode.
 
-== GitHub updates (optional) ==
+== Updates (Cloudflare broker) ==
 
-To push this plugin to GitHub and have all sites receive update notifications:
+Production installs receive updates from the FSM Cloudflare update broker (not GitHub). No wp-config tokens are required for clients.
 
-1. Create a GitHub repo (e.g. YourOrg/fsm-faq) and push this plugin code.
-2. Add the Plugin Update Checker library:
-   - Download the latest release from https://github.com/YahnisElsts/plugin-update-checker/releases
-   - Extract it and copy the "plugin-update-checker" folder into wp-content/plugins/fsm-faq/vendor/
-   - You should have: fsm-faq/vendor/plugin-update-checker/plugin-update-checker.php (and Puc/, etc.)
-   - Commit vendor/ to your repo so release zips include the updater.
-3. On each site (or in a shared wp-config), add:
-   define( 'FSM_FAQ_GITHUB_REPO', 'https://github.com/YourOrg/fsm-faq/' );
-4. For a private repo, also add a GitHub personal access token (repo scope):
-   define( 'FSM_FAQ_GITHUB_TOKEN', 'ghp_...' );
-5. To release an update: bump the Version header in fsm-faq.php and the "Stable tag" in readme.txt, then either:
-   - Create a new GitHub Release (tag e.g. v1.0.1), or
-   - Push a new tag (e.g. v1.0.1), or
-   - Push to the branch set in FSM_FAQ_GITHUB_REPO (default: main).
-   Sites will show "Update available" and can update with one click.
+1. Default metadata URL: https://updates.fullspectrummarketing.com/fsm-faq.json
+2. Optional override: define( 'FSM_FAQ_UPDATE_URL', 'https://updates.fullspectrummarketing.com/fsm-faq.json' );
+3. Agency-only GitHub override (both required): FSM_FAQ_GITHUB_REPO + FSM_FAQ_GITHUB_TOKEN — do not use on client sites.
+4. To release: bump Version / Stable tag, publish a GitHub Release; CI syncs the zip to the broker. See GITHUB_UPDATES.md and update-broker/.
+
+Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the repo private. Details in update-broker/CUTOVER.md.
 
 == Changelog ==
 
@@ -101,6 +92,13 @@ To push this plugin to GitHub and have all sites receive update notifications:
 * New: Native drag-and-drop ordering on the All FAQs screen (menu_order); ACF "Page FAQs" relationship order takes precedence per page.
 * New: FAQ schema output modes – inline JSON-LD (default), merge into Yoast/Rank Math/All in One SEO graph, or off.
 * Improvement: FAQ output cache now busts on content, order, and settings changes.
+
+= 1.1.1 =
+* Harden release packaging: explicit allowlist so root secret files cannot ship in the public update zip.
+
+= 1.1.0 =
+* Bridge release: default updates via FSM Cloudflare broker (no per-site GitHub tokens).
+* Agency GitHub override retained when both FSM_FAQ_GITHUB_REPO and FSM_FAQ_GITHUB_TOKEN are set.
 
 = 1.0.5 =
 * Normalize typographic apostrophes in FAQ question titles (same as answers) so titles display correctly with Divi and other processors.
