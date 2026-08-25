@@ -1,65 +1,72 @@
-# GitHub-based updates for FSM FAQ
+# GitHub-based / broker updates for FSM FAQ
 
-This plugin can use [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker) (PUC) so that **GitHub is the source of truth**: when you push a new release, all sites using the plugin see "Update available" in the WordPress Plugins screen and can update with one click.
+This plugin uses [Plugin Update Checker](https://github.com/YahnisElsts/plugin-update-checker) (PUC). **Production installs talk to the FSM Cloudflare update broker**, not GitHub. That keeps the GitHub repo private while sites still get one-click updates.
 
-## One-time setup
+## Architecture
 
-### 1. Put the plugin on GitHub
-
-- Create a repository (e.g. `FullSpectrumMarketing/fsm-faq` or `YourOrg/fsm-faq`).
-- Push this plugin code to the default branch (e.g. `main`).
-
-### 2. Add the Plugin Update Checker library
-
-- Download the latest release: https://github.com/YahnisElsts/plugin-update-checker/releases  
-- Extract the zip. Inside you’ll see a folder **`plugin-update-checker`** (with `plugin-update-checker.php`, `Puc/`, etc.).
-- Copy that folder into this plugin as **`vendor/plugin-update-checker`**:
-  - Result: `fsm-faq/vendor/plugin-update-checker/plugin-update-checker.php` (and the rest of PUC).
-- Commit the `vendor/` folder so your repo and release zips include the updater.
-
-### 3. Tell the plugin where to check for updates
-
-**Public repo (recommended):** keep the repository **public** on GitHub. The plugin already points at the default FSM URL (`https://github.com/FSM-agency/FSM-FAQ-Plugin/`). In that case you do **not** need any `wp-config.php` defines on client sites—no API keys on each install.
-
-If the canonical repo URL is different, set it once per site (or in a shared `wp-config.php`):
-
-```php
-define( 'FSM_FAQ_GITHUB_REPO', 'https://github.com/YourOrg/fsm-faq/' );
+```
+GitHub Release (private) → broker sync (CI or manual) → Cloudflare Worker
+                                                          ↓
+                                              Client WordPress (PUC)
 ```
 
-Trailing slash is fine.
+- Default metadata URL: `https://updates.fullspectrummarketing.com/fsm-faq.json`
+- Zip download: `https://updates.fullspectrummarketing.com/fsm-faq.zip`
+- Broker code and ops: [`update-broker/`](update-broker/)
 
-**Private repo (optional):** if you must keep the repo private, create a [GitHub Personal Access Token](https://github.com/settings/tokens) with `repo` scope (or a fine-grained token with read access to that repo) and add **on each site** that should receive updates:
+## Client sites (production)
 
-```php
-define( 'FSM_FAQ_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxx' );
-```
+No `wp-config.php` defines required when using the default broker URL.
 
-Prefer a public repo so you avoid rotating tokens across many hosts.
-
-### 4. Optional: change update branch
-
-By default the plugin checks the **`main`** branch (or GitHub Releases/tags). To use another branch:
+Optional override of the metadata URL:
 
 ```php
-add_filter( 'fsm_faq_update_branch', function() { return 'stable'; } );
+define( 'FSM_FAQ_UPDATE_URL', 'https://updates.fullspectrummarketing.com/fsm-faq.json' );
 ```
 
-## Releasing an update
+**Do not** put `FSM_FAQ_GITHUB_TOKEN` on client sites.
 
-1. Bump the **Version** in `fsm-faq.php` (e.g. `1.0.1`) and the **Stable tag** in `readme.txt`.
-2. Commit and push.
-3. Do one of the following:
-   - **GitHub Release:** Repo → Releases → Create a new release, choose or create a tag (e.g. `v1.0.1`).
-   - **Tag only:** `git tag v1.0.1 && git push origin v1.0.1`
-   - **Branch:** If you use a stable branch, PUC will use the Version header from that branch; just push to it.
+## Agency / internal GitHub override
 
-Sites will see the update within about 12 hours, or immediately if someone clicks "Check for updates" on the Plugins screen.
+Only for FSM-controlled environments that must hit GitHub directly:
+
+```php
+define( 'FSM_FAQ_GITHUB_REPO', 'https://github.com/FSM-agency/FSM-FAQ-Plugin/' );
+define( 'FSM_FAQ_GITHUB_TOKEN', 'ghp_xxxxxxxxxxxx' ); // never commit
+```
+
+Both must be set; then PUC uses GitHub instead of the broker.
+
+## Zero-break cutover (do not privatize first)
+
+1. **Broker live** — Deploy `update-broker` on the FSM Cloudflare account; sync at least one release; verify JSON + zip. Repo stays **public**.
+2. **Bridge release** — Ship plugin **1.1.0+** (this version points PUC at the broker) as a normal **public** GitHub Release so existing sites auto-update via the old GitHub flow.
+3. **Soak** — Confirm key installs show 1.1.0+ and “Check for updates” succeeds against the broker.
+4. **Privatize** — Set the GitHub repo to private. Sites on 1.1.0+ are unaffected.
+5. **Steady state** — Every later release: bump Version → GitHub Release → workflow/`sync-release` uploads zip to broker → sites update from Cloudflare.
+
+See [`update-broker/CUTOVER.md`](update-broker/CUTOVER.md) for the privatize checklist.
+
+## Releasing an update (after cutover)
+
+1. Bump **Version** in `fsm-faq.php` and **Stable tag** in `readme.txt`.
+2. Commit, tag, and publish a GitHub Release (e.g. `v1.1.1`).
+3. Ensure GitHub Actions secrets `FSM_FAQ_BROKER_URL` and `FSM_FAQ_BROKER_SYNC_SECRET` are set so [`.github/workflows/sync-update-broker.yml`](.github/workflows/sync-update-broker.yml) pushes the zip to the broker.
+4. Or sync manually:
+
+```bash
+cd update-broker
+BROKER_URL=https://updates.fullspectrummarketing.com \
+SYNC_SECRET=… \
+node scripts/sync-release.mjs 1.1.1
+```
+
+Sites see the update within ~12 hours, or immediately after “Check for updates”.
 
 ## Flow summary
 
-- **Source of truth:** Your GitHub repo.
-- **Sites:** Install the plugin once (from a release zip or clone). For the default **public** repo, no defines are required. Custom or private repos need `FSM_FAQ_GITHUB_REPO` and, if private, `FSM_FAQ_GITHUB_TOKEN` per site.
-- **Updates:** You release on GitHub → PUC on each site detects the new version → WordPress shows "Update available" → one-click update.
-
-No WordPress.org listing or custom server required.
+| Audience | Update source | Secrets on site |
+|----------|---------------|-----------------|
+| Client installs | Cloudflare broker | None |
+| FSM internal override | Private GitHub | `FSM_FAQ_GITHUB_TOKEN` |
+| Broker itself | GitHub App/PAT or CI upload | Worker `SYNC_SECRET` / `GITHUB_TOKEN` |

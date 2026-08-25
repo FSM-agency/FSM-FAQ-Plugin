@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fsm-faq-update-broker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-20",
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "updates.fullspectrummarketing.com",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "PLUGIN_SLUG": "fsm-faq",
+    "GITHUB_OWNER": "FSM-agency",
+    "GITHUB_REPO": "FSM-FAQ-Plugin",
+    "PUBLIC_BASE_URL": "https://updates.fullspectrummarketing.com"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "STORE",
+      // FSM account namespace "fsm-faq-update-broker" (created via Cloudflare MCP)
+      "id": "b40e905330c047dd920002daa7c411f8"
+    }
+  ]
+}

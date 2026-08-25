@@ -1,10 +1,15 @@
 <?php
 /**
- * FSM FAQ: GitHub-based plugin updates via Plugin Update Checker (PUC).
+ * FSM FAQ: plugin updates via Plugin Update Checker (PUC).
  *
- * Default source is the public repo below. No wp-config constants are required when that repo
- * is public and matches your install. Override FSM_FAQ_GITHUB_REPO if the code lives elsewhere;
- * use FSM_FAQ_GITHUB_TOKEN only for private repositories (never commit tokens).
+ * Production (default): Cloudflare update broker JSON metadata URL.
+ * Client sites do not need GitHub tokens.
+ *
+ * Internal override (agency only): if both FSM_FAQ_GITHUB_REPO and
+ * FSM_FAQ_GITHUB_TOKEN are defined, check GitHub directly (private-repo testing).
+ * Do not use the GitHub override on client installs.
+ *
+ * Optional: FSM_FAQ_UPDATE_URL overrides the broker metadata URL.
  *
  * @link https://github.com/YahnisElsts/plugin-update-checker
  */
@@ -25,18 +30,27 @@ require_once $puc_path;
 
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
-$fsm_faq_repo = ( defined( 'FSM_FAQ_GITHUB_REPO' ) && FSM_FAQ_GITHUB_REPO )
-	? FSM_FAQ_GITHUB_REPO
-	: 'https://github.com/FSM-agency/FSM-FAQ-Plugin/';
+$fsm_faq_use_github = defined( 'FSM_FAQ_GITHUB_REPO' ) && FSM_FAQ_GITHUB_REPO
+	&& defined( 'FSM_FAQ_GITHUB_TOKEN' ) && FSM_FAQ_GITHUB_TOKEN;
 
-$fsm_faq_update_checker = PucFactory::buildUpdateChecker(
-	$fsm_faq_repo,
-	FSM_FAQ_PATH . 'fsm-faq.php',
-	'fsm-faq'
-);
-
-$fsm_faq_update_checker->setBranch( apply_filters( 'fsm_faq_update_branch', 'main' ) );
-
-if ( defined( 'FSM_FAQ_GITHUB_TOKEN' ) && FSM_FAQ_GITHUB_TOKEN ) {
+if ( $fsm_faq_use_github ) {
+	// Agency/dev escape hatch: direct GitHub (requires token when repo is private).
+	$fsm_faq_update_checker = PucFactory::buildUpdateChecker(
+		FSM_FAQ_GITHUB_REPO,
+		FSM_FAQ_PATH . 'fsm-faq.php',
+		'fsm-faq'
+	);
+	$fsm_faq_update_checker->setBranch( apply_filters( 'fsm_faq_update_branch', 'main' ) );
 	$fsm_faq_update_checker->setAuthentication( FSM_FAQ_GITHUB_TOKEN );
+} else {
+	// Production: FSM Cloudflare broker (no GitHub credentials on the site).
+	$fsm_faq_metadata = ( defined( 'FSM_FAQ_UPDATE_URL' ) && FSM_FAQ_UPDATE_URL )
+		? FSM_FAQ_UPDATE_URL
+		: 'https://updates.fullspectrummarketing.com/fsm-faq.json';
+
+	$fsm_faq_update_checker = PucFactory::buildUpdateChecker(
+		$fsm_faq_metadata,
+		FSM_FAQ_PATH . 'fsm-faq.php',
+		'fsm-faq'
+	);
 }

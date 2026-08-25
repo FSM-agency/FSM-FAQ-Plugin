@@ -1,0 +1,3 @@
+# Local Wrangler secrets example (copy to .dev.vars — do not commit .dev.vars)
+SYNC_SECRET=replace-with-long-random-string
+# GITHUB_TOKEN=ghp_optional_for_sync_from_github
