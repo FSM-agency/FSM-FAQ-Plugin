@@ -4,13 +4,17 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-20",
   "workers_dev": true,
-  // Custom domain after claim + DNS: updates.fullspectrummarketing.com
-  // "routes": [{ "pattern": "updates.fullspectrummarketing.com/*", "zone_name": "fullspectrummarketing.com" }],
+  "routes": [
+    {
+      "pattern": "updates.fullspectrummarketing.com",
+      "custom_domain": true
+    }
+  ],
   "vars": {
     "PLUGIN_SLUG": "fsm-faq",
     "GITHUB_OWNER": "FSM-agency",
     "GITHUB_REPO": "FSM-FAQ-Plugin",
-    "PUBLIC_BASE_URL": ""
+    "PUBLIC_BASE_URL": "https://updates.fullspectrummarketing.com"
   },
   "kv_namespaces": [
     {
