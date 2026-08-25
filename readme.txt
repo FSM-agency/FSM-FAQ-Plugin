@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -48,6 +48,9 @@ Production installs receive updates from the FSM Cloudflare update broker (not G
 Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the repo private. Details in update-broker/CUTOVER.md.
 
 == Changelog ==
+
+= 1.1.1 =
+* Harden release packaging: explicit allowlist so root secret files cannot ship in the public update zip.
 
 = 1.1.0 =
 * Bridge release: default updates via FSM Cloudflare broker (no per-site GitHub tokens).
