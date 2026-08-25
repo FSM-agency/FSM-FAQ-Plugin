@@ -43,6 +43,24 @@ function fsm_faq_get_default_settings() {
 }
 
 /**
+ * Map a stored icon library to one that does not load a third-party CDN.
+ *
+ * Legacy "fontawesome" values become ET Modules on Divi and bundled SVG elsewhere.
+ *
+ * @param string $library Saved or submitted library key.
+ * @return string 'et_modules' or 'svg'.
+ * @since 1.1.3
+ */
+function fsm_faq_normalize_icon_library( $library ) {
+	if ( 'et_modules' === $library || 'svg' === $library ) {
+		return $library;
+	}
+
+	$is_divi = function_exists( 'fsm_faq_is_divi_active' ) ? fsm_faq_is_divi_active() : false;
+	return $is_divi ? 'et_modules' : 'svg';
+}
+
+/**
  * Get merged settings (saved values over defaults).
  *
  * @return array<string,mixed> Effective settings.
@@ -54,7 +72,9 @@ function fsm_faq_get_settings() {
 	if ( ! is_array( $saved ) ) {
 		$saved = array();
 	}
-	return wp_parse_args( $saved, $defaults );
+	$settings                 = wp_parse_args( $saved, $defaults );
+	$settings['icon_library'] = fsm_faq_normalize_icon_library( $settings['icon_library'] );
+	return $settings;
 }
 
 /**
@@ -75,7 +95,7 @@ function fsm_faq_settings_hash() {
  */
 function fsm_faq_settings_allowed_values() {
 	return array(
-		'icon_library' => array( 'et_modules', 'fontawesome', 'svg' ),
+		'icon_library' => array( 'et_modules', 'svg' ),
 		'icon_pair'    => array( 'plus_minus', 'chevron', 'caret', 'angle', 'none' ),
 		'schema_mode'  => array( 'shortcode', 'seo_plugin', 'off' ),
 	);
@@ -168,9 +188,11 @@ function fsm_faq_sanitize_settings( $input ) {
 		$clean[ $key ] = $value ? $value : $defaults[ $key ];
 	}
 
-	$clean['icon_library'] = ( isset( $input['icon_library'] ) && in_array( $input['icon_library'], $allowed['icon_library'], true ) )
-		? $input['icon_library']
-		: $defaults['icon_library'];
+	$clean['icon_library'] = fsm_faq_normalize_icon_library(
+		( isset( $input['icon_library'] ) && in_array( $input['icon_library'], $allowed['icon_library'], true ) )
+			? $input['icon_library']
+			: $defaults['icon_library']
+	);
 
 	$clean['icon_pair'] = ( isset( $input['icon_pair'] ) && in_array( $input['icon_pair'], $allowed['icon_pair'], true ) )
 		? $input['icon_pair']
@@ -223,9 +245,8 @@ function fsm_faq_render_settings_page() {
 		'none'       => __( 'No icon', 'fsm-faq' ),
 	);
 	$icon_libs  = array(
-		'et_modules'  => __( 'ET Modules (Divi built-in font)', 'fsm-faq' ),
-		'fontawesome' => __( 'Font Awesome', 'fsm-faq' ),
-		'svg'         => __( 'SVG (bundled icons)', 'fsm-faq' ),
+		'et_modules' => __( 'ET Modules (Divi built-in font)', 'fsm-faq' ),
+		'svg'        => __( 'SVG (bundled icons)', 'fsm-faq' ),
 	);
 	$schema_modes = array(
 		'shortcode'  => __( 'Output from this plugin (recommended)', 'fsm-faq' ),
@@ -277,7 +298,7 @@ function fsm_faq_render_settings_page() {
 								<option value="<?php echo esc_attr( $value ); ?>" <?php selected( $s['icon_library'], $value ); ?>><?php echo esc_html( $label ); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<p class="description"><?php echo esc_html__( 'ET Modules uses the icon font shipped with Divi. Font Awesome is loaded from a CDN only when selected. SVG uses lightweight icons bundled with this plugin.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'ET Modules uses the icon font shipped with Divi. SVG uses lightweight icons bundled with this plugin.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -403,7 +424,7 @@ function fsm_faq_seo_plugin_label( $slug ) {
 /**
  * Map of icon library -> pair -> closed/open glyph data.
  *
- * ET Modules and Font Awesome values are font glyph codepoints; SVG values are
+ * ET Modules values are font glyph codepoints; SVG values are bundled file
  * bundled file basenames under assets/icons/.
  *
  * @return array<string,array<string,array<string,string>>>
@@ -416,12 +437,6 @@ function fsm_faq_icon_definitions() {
 			'chevron'    => array( 'closed' => '\33', 'open' => '\32' ),
 			'caret'      => array( 'closed' => '\e044', 'open' => '\e043' ),
 			'angle'      => array( 'closed' => '\37', 'open' => '\36' ),
-		),
-		'fontawesome' => array(
-			'plus_minus' => array( 'closed' => '\f067', 'open' => '\f068' ),
-			'chevron'    => array( 'closed' => '\f078', 'open' => '\f077' ),
-			'caret'      => array( 'closed' => '\f0d7', 'open' => '\f0d8' ),
-			'angle'      => array( 'closed' => '\f107', 'open' => '\f106' ),
 		),
 		'svg'         => array(
 			'plus_minus' => array( 'closed' => 'plus', 'open' => 'minus' ),
@@ -474,10 +489,6 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 	$settings = fsm_faq_get_settings();
 	$base_url = plugin_dir_url( dirname( __FILE__ ) ) . 'assets/';
 
-	if ( 'fontawesome' === $settings['icon_library'] && 'none' !== $settings['icon_pair'] ) {
-		fsm_faq_enqueue_fontawesome();
-	}
-
 	if ( 'generic' === $context ) {
 		wp_enqueue_style( 'fsm-faq-accordion', $base_url . 'fsm-faq-accordion.css', array(), FSM_FAQ_VERSION );
 		wp_enqueue_script( 'fsm-faq-accordion', $base_url . 'fsm-faq-accordion.js', array(), FSM_FAQ_VERSION, true );
@@ -526,22 +537,6 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 function fsm_faq_divi_close_script_already_loaded() {
 	return wp_script_is( 'fsm-divi-accordion-close', 'enqueued' )
 		|| wp_script_is( 'fsm-divi-accordion-close', 'done' );
-}
-
-/**
- * Enqueue Font Awesome from a CDN, unless a Font Awesome stylesheet is already registered.
- *
- * @since 1.1.0
- */
-function fsm_faq_enqueue_fontawesome() {
-	$known_handles = array( 'font-awesome', 'fontawesome', 'fa', 'font-awesome-official', 'font-awesome-5' );
-	foreach ( $known_handles as $handle ) {
-		if ( wp_style_is( $handle, 'enqueued' ) || wp_style_is( $handle, 'registered' ) ) {
-			return;
-		}
-	}
-	$url = apply_filters( 'fsm_faq_fontawesome_url', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css' );
-	wp_enqueue_style( 'fsm-faq-fontawesome', esc_url_raw( $url ), array(), '6.5.2' );
 }
 
 /**
@@ -628,15 +623,10 @@ function fsm_faq_build_generic_icon_css( $s ) {
 		);
 	}
 
-	// Font-based libraries (ET Modules / Font Awesome).
-	$family = ( 'fontawesome' === $lib ) ? '"Font Awesome 6 Free"' : 'ETmodules';
-	$weight = ( 'fontawesome' === $lib ) ? 'font-weight:900;' : '';
 	return sprintf(
-		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:%2$s;%3$scolor:var(--fsm-faq-icon-color);}'
-		. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%4$s";}',
+		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:ETmodules;color:var(--fsm-faq-icon-color);}'
+		. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%2$s";}',
 		$glyph['closed'],
-		$family,
-		$weight,
 		$glyph['open']
 	);
 }
@@ -712,14 +702,10 @@ function fsm_faq_build_divi_icon_css( $s ) {
 		);
 	}
 
-	$family = ( 'fontawesome' === $lib ) ? '"Font Awesome 6 Free"' : 'ETmodules';
-	$weight = ( 'fontawesome' === $lib ) ? 'font-weight:900;' : '';
 	return sprintf(
-		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;font-family:%2$s !important;%3$scolor:%4$s !important;}'
-		. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%5$s" !important;}',
+		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;font-family:ETmodules !important;color:%2$s !important;}'
+		. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%3$s" !important;}',
 		$glyph['closed'],
-		$family,
-		$weight,
 		$color,
 		$glyph['open']
 	);

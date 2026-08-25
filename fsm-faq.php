@@ -56,3 +56,15 @@ function fsm_faq_acf_required_notice() {
 	echo esc_html__( 'FSM FAQ requires Advanced Custom Fields Pro. Install and activate ACF Pro to use FAQ fields and the shortcode.', 'fsm-faq' );
 	echo '</p></div>';
 }
+
+/**
+ * Grant FAQ capabilities on activation so Editors/Admins can manage FAQs
+ * immediately, even before the first admin_init after ACF is available.
+ *
+ * @since 1.1.3
+ */
+register_activation_hook( __FILE__, 'fsm_faq_activate' );
+function fsm_faq_activate() {
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-cpt.php';
+	fsm_faq_grant_capabilities();
+}

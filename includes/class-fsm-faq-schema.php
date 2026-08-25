@@ -70,7 +70,8 @@ function fsm_faq_get_inline_schema_script( $schema_questions ) {
 		'mainEntity' => $schema_questions,
 	);
 
-	return '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ) . '</script>';
+	// JSON_HEX_TAG / JSON_HEX_AMP encode <, >, and & so a payload cannot close this <script> tag.
+	return '<script type="application/ld+json">' . wp_json_encode( $schema, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE ) . '</script>';
 }
 
 /**

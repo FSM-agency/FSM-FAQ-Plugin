@@ -6,17 +6,16 @@
  * (default: Page; extend via fsm_faq_parent_post_types filter)
  * for bidirectional editing. No manual ACF setup required.
  *
- * One-time migration: removes any existing FAQ/Page FAQs field groups from the
- * database (by key) so the plugin's local groups are the single source of truth.
- * Post meta (faq_answer, display_on_pages) is unchanged; only the group definitions
- * move from DB to plugin code.
+ * One-time: deactivates any database copies of these field groups (same keys) so
+ * the plugin's local groups are used. Groups are not deleted and can be re-enabled
+ * under Custom Fields → Field Groups.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Keys for FAQ and Page FAQs field groups — used for migration and registration. */
+/** Keys for FAQ and Page FAQs field groups. */
 define( 'FSM_FAQ_ACF_GROUP_FAQS', 'group_68dd4428d3136' );
 define( 'FSM_FAQ_ACF_GROUP_PAGE_FAQS', 'group_68f0076749dc4' );
 
@@ -38,25 +37,239 @@ function fsm_faq_get_parent_post_types() {
 }
 
 /**
- * One-time migration: remove native (DB) FAQ/Page FAQs field groups so plugin's
- * local groups are the single source. Runs before local registration.
+ * Allowed HTML for FAQ answers (front-end, schema, and on save).
+ *
+ * Permits formatting, http(s)/mailto links, images, and tables. No scripts,
+ * iframes, event handlers, or arbitrary shortcodes.
+ *
+ * @return array<string,array<string,bool>>
+ * @since 1.1.3
  */
-add_action( 'acf/init', 'fsm_faq_maybe_remove_native_faq_groups', 5 );
-function fsm_faq_maybe_remove_native_faq_groups() {
-	if ( ! function_exists( 'acf_get_field_group' ) ) {
+function fsm_faq_answer_allowed_html() {
+	$cell_atts = array(
+		'class'   => true,
+		'colspan' => true,
+		'rowspan' => true,
+		'scope'   => true,
+		'width'   => true,
+		'height'  => true,
+	);
+
+	return array(
+		'a'          => array(
+			'href'   => true,
+			'title'  => true,
+			'rel'    => true,
+			'target' => true,
+			'class'  => true,
+		),
+		'p'          => array( 'class' => true ),
+		'br'         => array(),
+		'strong'     => array(),
+		'b'          => array(),
+		'em'         => array(),
+		'i'          => array(),
+		'ul'         => array( 'class' => true ),
+		'ol'         => array( 'class' => true ),
+		'li'         => array( 'class' => true ),
+		'blockquote' => array( 'class' => true ),
+		'span'       => array( 'class' => true ),
+		'img'        => array(
+			'src'      => true,
+			'alt'      => true,
+			'width'    => true,
+			'height'   => true,
+			'class'    => true,
+			'srcset'   => true,
+			'sizes'    => true,
+			'loading'  => true,
+			'decoding' => true,
+		),
+		'figure'     => array( 'class' => true ),
+		'figcaption' => array( 'class' => true ),
+		'table'      => array(
+			'class' => true,
+			'width' => true,
+		),
+		'caption'    => array( 'class' => true ),
+		'thead'      => array(),
+		'tbody'      => array(),
+		'tfoot'      => array(),
+		'tr'         => array( 'class' => true ),
+		'th'         => $cell_atts,
+		'td'         => $cell_atts,
+		'colgroup'   => array(),
+		'col'        => array(
+			'span'  => true,
+			'width' => true,
+		),
+	);
+}
+
+/**
+ * Expand only the core [caption] / [wp_caption] shortcodes (Add Media with a caption).
+ *
+ * Other shortcodes are left unexpanded so they cannot run, then stripped by kses.
+ *
+ * @param string $content Raw answer HTML.
+ * @return string
+ * @since 1.1.3
+ */
+function fsm_faq_expand_caption_shortcodes( $content ) {
+	if ( ! is_string( $content ) || '' === $content || false === strpos( $content, '[' ) ) {
+		return $content;
+	}
+
+	global $shortcode_tags;
+	if ( empty( $shortcode_tags ) || ! is_array( $shortcode_tags ) ) {
+		return $content;
+	}
+
+	$allowed        = array_flip( array( 'caption', 'wp_caption' ) );
+	$original       = $shortcode_tags;
+	$shortcode_tags = array_intersect_key( $original, $allowed );
+	$content        = do_shortcode( $content );
+	$shortcode_tags = $original;
+
+	return $content;
+}
+
+/**
+ * Harden <a> tags: only _blank as target; add noopener noreferrer when it is used.
+ *
+ * @param string $html HTML after wp_kses.
+ * @return string
+ * @since 1.1.3
+ */
+function fsm_faq_harden_answer_links( $html ) {
+	if ( '' === $html || ! class_exists( 'WP_HTML_Tag_Processor' ) ) {
+		return $html;
+	}
+
+	$processor = new WP_HTML_Tag_Processor( $html );
+	while ( $processor->next_tag( 'A' ) ) {
+		$target = strtolower( (string) $processor->get_attribute( 'target' ) );
+		if ( $target && '_blank' !== $target ) {
+			$processor->remove_attribute( 'target' );
+			$target = '';
+		}
+		if ( '_blank' === $target ) {
+			$rel       = (string) $processor->get_attribute( 'rel' );
+			$rel_parts = $rel ? preg_split( '/\s+/', strtolower( $rel ) ) : array();
+			$rel_parts = is_array( $rel_parts ) ? $rel_parts : array();
+			foreach ( array( 'noopener', 'noreferrer' ) as $token ) {
+				if ( ! in_array( $token, $rel_parts, true ) ) {
+					$rel_parts[] = $token;
+				}
+			}
+			$processor->set_attribute( 'rel', implode( ' ', array_filter( $rel_parts ) ) );
+		}
+	}
+
+	return $processor->get_updated_html();
+}
+
+/**
+ * Prepare FAQ answer HTML for storage and display.
+ *
+ * Does not run the_content (no arbitrary shortcodes or oEmbed). Applies wpautop
+ * and a tight kses allowlist so images, tables, and links remain.
+ *
+ * @param string $content Raw answer from ACF.
+ * @return string Safe HTML.
+ * @since 1.1.3
+ */
+function fsm_faq_sanitize_answer_html( $content ) {
+	if ( ! is_string( $content ) || '' === $content ) {
+		return '';
+	}
+
+	$content = fsm_faq_normalize_typographic_apostrophes( $content );
+	$content = fsm_faq_expand_caption_shortcodes( $content );
+	$content = wpautop( $content );
+	$content = wp_kses(
+		$content,
+		fsm_faq_answer_allowed_html(),
+		array( 'http', 'https', 'mailto' )
+	);
+	$content = fsm_faq_harden_answer_links( $content );
+
+	return $content;
+}
+
+/**
+ * Restrict the FAQ answer WYSIWYG to formatting, links, lists, and tables.
+ * Add Media remains available on the field for images.
+ *
+ * @param array $toolbars ACF toolbar definitions.
+ * @return array
+ * @since 1.1.3
+ */
+function fsm_faq_wysiwyg_toolbars( $toolbars ) {
+	$toolbars['FAQ']    = array();
+	$toolbars['FAQ'][1] = array(
+		'bold',
+		'italic',
+		'bullist',
+		'numlist',
+		'link',
+		'unlink',
+		'blockquote',
+		'table',
+		'undo',
+		'redo',
+		'removeformat',
+	);
+	return $toolbars;
+}
+add_filter( 'acf/fields/wysiwyg/toolbars', 'fsm_faq_wysiwyg_toolbars' );
+
+/**
+ * Sanitize faq_answer when saved so disallowed markup is not stored.
+ *
+ * @param mixed $value Field value.
+ * @return mixed
+ * @since 1.1.3
+ */
+function fsm_faq_sanitize_answer_on_save( $value ) {
+	if ( ! is_string( $value ) ) {
+		return $value;
+	}
+	return fsm_faq_sanitize_answer_html( $value );
+}
+add_filter( 'acf/update_value/name=faq_answer', 'fsm_faq_sanitize_answer_on_save', 10, 1 );
+
+/**
+ * One-time: deactivate native (DB) FAQ field groups so plugin local groups are used.
+ *
+ * Does not delete field-group posts. FAQ post meta is unchanged. Re-run is skipped
+ * after fsm_faq_acf_db_groups_deactivated is set; groups can be re-activated in ACF.
+ *
+ * @since 1.1.3
+ */
+add_action( 'acf/init', 'fsm_faq_maybe_deactivate_native_faq_groups', 5 );
+function fsm_faq_maybe_deactivate_native_faq_groups() {
+	if ( ! function_exists( 'acf_get_field_group' ) || ! function_exists( 'acf_update_field_group' ) ) {
 		return;
 	}
-	if ( get_option( 'fsm_faq_acf_migrated', false ) ) {
+	if ( get_option( 'fsm_faq_acf_db_groups_deactivated', false ) ) {
 		return;
 	}
+
 	$keys = array( FSM_FAQ_ACF_GROUP_FAQS, FSM_FAQ_ACF_GROUP_PAGE_FAQS );
 	foreach ( $keys as $key ) {
 		$group = acf_get_field_group( $key );
-		if ( $group && ! empty( $group['ID'] ) ) {
-			wp_delete_post( (int) $group['ID'], true );
+		if ( ! is_array( $group ) || empty( $group['ID'] ) ) {
+			continue;
 		}
+		if ( isset( $group['active'] ) && ! $group['active'] ) {
+			continue;
+		}
+		$group['active'] = 0;
+		acf_update_field_group( $group );
 	}
-	update_option( 'fsm_faq_acf_migrated', true );
+
+	update_option( 'fsm_faq_acf_db_groups_deactivated', true, true );
 }
 
 add_action( 'acf/init', 'fsm_faq_register_field_groups', 10 );
@@ -88,7 +301,7 @@ function fsm_faq_register_field_groups() {
 				'name'              => 'faq_answer',
 				'aria-label'        => '',
 				'type'              => 'wysiwyg',
-				'instructions'      => '',
+				'instructions'      => 'Formatting, lists, links (http/https/mailto), images via Add Media, and HTML tables. Shortcodes and embeds are not rendered.',
 				'required'          => 1,
 				'conditional_logic' => 0,
 				'wrapper'           => array(
@@ -98,7 +311,7 @@ function fsm_faq_register_field_groups() {
 				),
 				'default_value'     => '',
 				'tabs'              => 'all',
-				'toolbar'           => 'full',
+				'toolbar'           => 'FAQ',
 				'media_upload'      => 1,
 				'delay'             => 0,
 			),

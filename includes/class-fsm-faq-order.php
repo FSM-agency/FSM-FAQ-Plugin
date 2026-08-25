@@ -68,7 +68,7 @@ function fsm_faq_order_enqueue( $hook ) {
 	if ( ! $screen || 'faq' !== $screen->post_type ) {
 		return;
 	}
-	if ( ! current_user_can( 'edit_others_posts' ) || ! fsm_faq_order_is_sortable_view() ) {
+	if ( ! current_user_can( 'edit_others_faqs' ) || ! fsm_faq_order_is_sortable_view() ) {
 		return;
 	}
 
@@ -112,7 +112,7 @@ add_action( 'wp_ajax_fsm_faq_update_order', 'fsm_faq_ajax_update_order' );
 function fsm_faq_ajax_update_order() {
 	check_ajax_referer( 'fsm_faq_update_order', 'nonce' );
 
-	if ( ! current_user_can( 'edit_others_posts' ) ) {
+	if ( ! current_user_can( 'edit_others_faqs' ) ) {
 		wp_send_json_error( array( 'message' => 'insufficient_permissions' ), 403 );
 	}
 

@@ -47,12 +47,24 @@ function fsm_faq_normalize_typographic_apostrophes( $text ) {
 }
 
 /**
+ * Maximum number of FAQ posts loaded for a page (shortcode / schema).
+ *
+ * Never returns a value below 1, so WP_Query is never passed posts_per_page -1.
+ * Raise via the fsm_faq_query_limit filter when a page legitimately needs more.
+ *
+ * @return int
+ * @since 1.1.3
+ */
+function fsm_faq_get_query_limit() {
+	$limit = (int) apply_filters( 'fsm_faq_query_limit', 50 );
+	return ( $limit < 1 ) ? 50 : $limit;
+}
+
+/**
  * Get FAQ items and schema data for a post. Shared by both shortcodes.
  *
- * Answer text in schema uses the_content + wp_kses_post so acceptedAnswer.text
- * includes the same HTML as the toggle. Keeping the HTML (not stripping to plain
- * text) helps bots/crawlers see the structure of the answer (paragraphs, lists,
- * etc.) rather than one run-on block.
+ * Answer HTML is sanitized with wpautop and a tight allowlist (not the_content)
+ * so schema and the toggle share the same safe markup, including tables and images.
  *
  * @param int $post_id Current page/post ID.
  * @return array{ items: array, schema_questions: array } Empty items/schema_questions on failure.
@@ -68,6 +80,8 @@ function fsm_faq_get_faq_data( $post_id ) {
 		return $result;
 	}
 
+	$query_limit = fsm_faq_get_query_limit();
+
 	// Per-page order: when the page's ACF "Page FAQs" relationship is populated, use
 	// that editor-defined order. Otherwise fall back to the global menu_order set via
 	// the FAQ list drag-and-drop.
@@ -75,32 +89,33 @@ function fsm_faq_get_faq_data( $post_id ) {
 	$ordered_ids = ( is_array( $ordered_ids ) ) ? array_values( array_filter( array_map( 'absint', $ordered_ids ) ) ) : array();
 
 	if ( ! empty( $ordered_ids ) ) {
-		$args = array(
-			'post_type'               => 'faq',
-			'posts_per_page'          => -1,
-			'post__in'                => $ordered_ids,
-			'orderby'                 => 'post__in',
-			'post_status'             => 'publish',
-			'no_found_rows'           => true,
-			'update_post_meta_cache'  => false,
-			'update_post_term_cache'  => false,
+		$ordered_ids = array_slice( $ordered_ids, 0, $query_limit );
+		$args        = array(
+			'post_type'              => 'faq',
+			'posts_per_page'         => $query_limit,
+			'post__in'               => $ordered_ids,
+			'orderby'                => 'post__in',
+			'post_status'            => 'publish',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
 		);
 	} else {
 		$args = array(
-			'post_type'               => 'faq',
-			'posts_per_page'          => -1,
-			'meta_query'              => array(
+			'post_type'              => 'faq',
+			'posts_per_page'         => $query_limit,
+			'meta_query'             => array(
 				array(
 					'key'     => 'display_on_pages',
 					'value'   => '"' . absint( $post_id ) . '"',
 					'compare' => 'LIKE',
 				),
 			),
-			'orderby'                 => 'menu_order',
-			'order'                   => 'ASC',
-			'no_found_rows'           => true,
-			'update_post_meta_cache'  => false,
-			'update_post_term_cache'  => false,
+			'orderby'                => 'menu_order',
+			'order'                  => 'ASC',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
 		);
 	}
 
@@ -120,21 +135,28 @@ function fsm_faq_get_faq_data( $post_id ) {
 			continue;
 		}
 
-		// Normalize typographic apostrophes so they are not stripped/replaced by the_content or wp_kses.
-		$answer = fsm_faq_normalize_typographic_apostrophes( $answer );
+		if ( function_exists( 'fsm_faq_sanitize_answer_html' ) ) {
+			$answer = fsm_faq_sanitize_answer_html( $answer );
+		} else {
+			$answer = fsm_faq_normalize_typographic_apostrophes( $answer );
+			$answer = wp_kses_post( $answer );
+		}
+
+		if ( '' === trim( wp_strip_all_tags( $answer ) ) && false === strpos( $answer, '<img' ) && false === strpos( $answer, '<table' ) ) {
+			continue;
+		}
 
 		$result['items'][] = array(
 			'question' => $question,
 			'answer'   => $answer,
 		);
 
-		// Schema answer: same the_content + wp_kses_post; HTML preserved so scrapers see structure (paragraphs, lists), not a run-on sentence.
 		$result['schema_questions'][] = array(
 			'@type'          => 'Question',
 			'name'           => esc_html( $question ),
 			'acceptedAnswer' => array(
 				'@type' => 'Answer',
-				'text'  => wp_kses_post( apply_filters( 'the_content', $answer ) ),
+				'text'  => $answer,
 			),
 		);
 	}
@@ -168,9 +190,8 @@ function fsm_faq_enqueue_generic_assets() {
 /**
  * Build Divi accordion markup (original behavior). No schema; caller adds it.
  *
- * Answer content is run through the_content so all WYSIWYG formatting (paragraphs,
- * lists, bold, links, etc.) and special characters (e.g. smart apostrophes) output
- * correctly in the toggle. Output is then passed through wp_kses_post for safety.
+ * Answer HTML is already sanitized in fsm_faq_get_faq_data(); apostrophes are
+ * entity-encoded so they survive post-shortcode processing (e.g. Divi).
  *
  * @param array $items Array of { question, answer }.
  * @return string HTML.
@@ -188,14 +209,13 @@ function fsm_faq_render_divi_markup( $items ) {
 	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$i   = 0;
 	foreach ( $items as $item ) {
-		$answer_content = apply_filters( 'the_content', $item['answer'] );
-		$answer_content = fsm_faq_normalize_typographic_apostrophes( $answer_content );
+		$answer_content = fsm_faq_normalize_typographic_apostrophes( $item['answer'] );
 		// Output apostrophe as entity so it survives any post-shortcode processing (e.g. Divi) that strips the raw character.
 		$answer_content = str_replace( "'", '&#39;', $answer_content );
 		$toggle_state_class = ( 0 === $i && $first_open ) ? 'et_pb_toggle_open' : 'et_pb_toggle_close';
 		$html .= '<div class="et_pb_toggle et_pb_module et_pb_accordion_item ' . esc_attr( $toggle_state_class ) . '">';
 		$html .= '<h3 class="et_pb_toggle_title">' . esc_html( $item['question'] ) . '</h3>';
-		$html .= '<div class="et_pb_toggle_content clearfix">' . wp_kses_post( $answer_content ) . '</div>';
+		$html .= '<div class="et_pb_toggle_content clearfix">' . $answer_content . '</div>';
 		$html .= '</div>';
 		$i++;
 	}
@@ -207,9 +227,8 @@ function fsm_faq_render_divi_markup( $items ) {
  * Build generic accordion markup (W3Schools-style). No schema; caller adds it.
  * Each question wraps in .fsm-faq-accordion__item (button + panel) for card chrome.
  *
- * Answer content is run through the_content so all WYSIWYG formatting (paragraphs,
- * lists, bold, links, etc.) and special characters (e.g. smart apostrophes) output
- * correctly in the toggle. Output is then passed through wp_kses_post for safety.
+ * Answer HTML is already sanitized in fsm_faq_get_faq_data(); apostrophes are
+ * entity-encoded so they survive post-shortcode processing.
  *
  * @param array $items Array of { question, answer }.
  * @return string HTML.
@@ -228,8 +247,7 @@ function fsm_faq_render_generic_markup( $items ) {
 	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$index   = 0;
 	foreach ( $items as $item ) {
-		$answer_content = apply_filters( 'the_content', $item['answer'] );
-		$answer_content = fsm_faq_normalize_typographic_apostrophes( $answer_content );
+		$answer_content = fsm_faq_normalize_typographic_apostrophes( $item['answer'] );
 		// Output apostrophe as entity so it survives any post-shortcode processing that strips the raw character.
 		$answer_content = str_replace( "'", '&#39;', $answer_content );
 		$btn_id   = $block_id . '-btn-' . $index;
@@ -239,7 +257,7 @@ function fsm_faq_render_generic_markup( $items ) {
 		$html    .= '<h3 class="fsm-faq-accordion__title">' . esc_html( $item['question'] ) . '</h3>';
 		$html    .= '</button>';
 		$html    .= '<div id="' . esc_attr( $panel_id ) . '" class="fsm-faq-accordion__panel" role="region" aria-labelledby="' . esc_attr( $btn_id ) . '">';
-		$html    .= '<div class="fsm-faq-accordion__panel-inner">' . wp_kses_post( $answer_content ) . '</div>';
+		$html    .= '<div class="fsm-faq-accordion__panel-inner">' . $answer_content . '</div>';
 		$html    .= '</div>';
 		$html    .= '</div>';
 		$index++;
