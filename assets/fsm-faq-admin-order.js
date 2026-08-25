@@ -2,16 +2,13 @@
  * FSM FAQ – Admin list-table drag-and-drop ordering.
  *
  * Makes the All FAQs table rows sortable and persists menu_order via AJAX.
+ * perPage comes from Screen Options (localized), not the visible row count,
+ * so incomplete last pages do not corrupt global menu_order offsets.
  *
  * @since 1.1.0
  */
 (function ($) {
 	'use strict';
-
-	function getPerPage($list) {
-		var $rows = $list.find('tr');
-		return $rows.length || 1;
-	}
 
 	function getPaged() {
 		var match = window.location.search.match(/[?&]paged=(\d+)/);
@@ -27,7 +24,7 @@
 			return;
 		}
 
-		var perPage = getPerPage($list);
+		var perPage = parseInt(fsmFaqOrder.perPage, 10) || 20;
 
 		$list.sortable({
 			items: 'tr',

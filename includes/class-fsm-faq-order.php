@@ -3,12 +3,29 @@
  * FSM FAQ: Native drag-and-drop ordering for the FAQ list table.
  *
  * Sets menu_order on the FAQ post type by dragging rows on the All FAQs screen
- * (no Order meta box). This provides a default global order; per-page order is
- * handled separately by the ACF "Page FAQs" relationship (see the shortcode).
+ * (no Order meta box). This provides the global display order used by the shortcode;
+ * the ACF "Page FAQs" relationship controls membership (which FAQs appear on a page).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+/**
+ * Screen Options per-page value for the All FAQs list table.
+ *
+ * Uses the current user's edit_faq_per_page setting so pagination offsets stay
+ * correct on incomplete last pages (visible row count must not be used).
+ *
+ * @return int At least 1; defaults to 20 when unset.
+ * @since 1.1.5
+ */
+function fsm_faq_get_edit_per_page() {
+	$per_page = (int) get_user_option( 'edit_faq_per_page' );
+	if ( $per_page < 1 ) {
+		$per_page = 20;
+	}
+	return $per_page;
 }
 
 /**
@@ -85,6 +102,7 @@ function fsm_faq_order_enqueue( $hook ) {
 		array(
 			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
 			'nonce'   => wp_create_nonce( 'fsm_faq_update_order' ),
+			'perPage' => fsm_faq_get_edit_per_page(),
 		)
 	);
 
@@ -104,7 +122,8 @@ function fsm_faq_order_enqueue( $hook ) {
  * AJAX handler: persist a new menu_order for the dragged FAQ rows.
  *
  * Assigns menu_order sequentially within the visible page, offset by the current
- * pagination so ordering is stable across paged views.
+ * pagination so ordering is stable across paged views. Per-page comes from the
+ * user's Screen Options (edit_faq_per_page), not the visible row count.
  *
  * @since 1.1.0
  */
@@ -123,11 +142,8 @@ function fsm_faq_ajax_update_order() {
 	}
 
 	$paged    = isset( $_POST['paged'] ) ? max( 1, absint( $_POST['paged'] ) ) : 1;
-	$per_page = isset( $_POST['perPage'] ) ? absint( $_POST['perPage'] ) : count( $ids );
-	if ( $per_page < 1 ) {
-		$per_page = count( $ids );
-	}
-	$base = ( $paged - 1 ) * $per_page;
+	$per_page = fsm_faq_get_edit_per_page();
+	$base     = ( $paged - 1 ) * $per_page;
 
 	foreach ( $ids as $index => $post_id ) {
 		if ( get_post_type( $post_id ) !== 'faq' || ! current_user_can( 'edit_post', $post_id ) ) {

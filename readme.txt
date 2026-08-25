@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.4
+Stable tag: 1.1.5
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -37,8 +37,8 @@ Changing settings automatically invalidates the FAQ output cache.
 
 == FAQ ordering ==
 
-* **Global order** – Drag-and-drop the rows on the All FAQs screen to set the default order (stored in menu_order). No extra plugin (e.g. Intuitive/Simple Custom Post Order) is required. Ordering is disabled while searching or filtering the list.
-* **Per-page order** – When a page's ACF "Page FAQs" relationship is populated, its editor-defined order takes precedence for that page. Otherwise the global drag-and-drop order is used.
+* **Global order** – Drag-and-drop the rows on the All FAQs screen to set display order (stored in menu_order). No extra plugin (e.g. Intuitive/Simple Custom Post Order) is required. Ordering is disabled while searching or filtering the list.
+* **Page membership** – The ACF "Page FAQs" relationship (bidirectional with Display On) controls which FAQs appear on a page. Front-end output always sorts those FAQs by the global menu_order from All FAQs drag-and-drop.
 
 == Structured data / SEO plugin schema ==
 
@@ -77,6 +77,12 @@ Production installs receive updates from the FSM Cloudflare update broker (not G
 Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the repo private. Details in update-broker/CUTOVER.md.
 
 == Changelog ==
+
+= 1.1.5 =
+* Fix: All FAQs drag-and-drop uses Screen Options `edit_faq_per_page` for pagination offsets so incomplete last pages no longer corrupt global `menu_order`.
+* Fix: Front-end shortcode always orders by `menu_order`; Page FAQs is membership only (bidirectional sync no longer blocks global drag order).
+* Fix: FAQ answer sanitize runs `wpautop` only when content has no block-level HTML, avoiding empty paragraphs from double-autop on save and display.
+* Fix: Allow `div` (and `figure` id/style) in answer kses so non-HTML5 `div.wp-caption` wrappers from Add Media captions are preserved.
 
 = 1.1.4 =
 * New: Settings page (FAQs → Settings) for brand colors, toggle icons (ET Modules / Font Awesome / SVG), border thickness/color, first-open and closable-toggle behavior, corner radius, and item spacing.

@@ -74,6 +74,11 @@ function fsm_faq_answer_allowed_html() {
 		'li'         => array( 'class' => true ),
 		'blockquote' => array( 'class' => true ),
 		'span'       => array( 'class' => true ),
+		'div'        => array(
+			'id'    => true,
+			'class' => true,
+			'style' => true, // Core sets width on div.wp-caption when HTML5 captions are off.
+		),
 		'img'        => array(
 			'src'      => true,
 			'alt'      => true,
@@ -85,7 +90,11 @@ function fsm_faq_answer_allowed_html() {
 			'loading'  => true,
 			'decoding' => true,
 		),
-		'figure'     => array( 'class' => true ),
+		'figure'     => array(
+			'id'    => true,
+			'class' => true,
+			'style' => true,
+		),
 		'figcaption' => array( 'class' => true ),
 		'table'      => array(
 			'class' => true,
@@ -173,7 +182,10 @@ function fsm_faq_harden_answer_links( $html ) {
  * Prepare FAQ answer HTML for storage and display.
  *
  * Does not run the_content (no arbitrary shortcodes or oEmbed). Applies wpautop
- * and a tight kses allowlist so images, tables, and links remain.
+ * only when the content has no block-level HTML yet (plain-text imports), then a
+ * tight kses allowlist so images, tables, captions, and links remain. Skips
+ * wpautop when markup already has paragraphs/blocks so save + front-end sanitize
+ * do not double-wrap.
  *
  * @param string $content Raw answer from ACF.
  * @return string Safe HTML.
@@ -186,7 +198,9 @@ function fsm_faq_sanitize_answer_html( $content ) {
 
 	$content = fsm_faq_normalize_typographic_apostrophes( $content );
 	$content = fsm_faq_expand_caption_shortcodes( $content );
-	$content = wpautop( $content );
+	if ( ! preg_match( '/<(p|ul|ol|li|table|figure|blockquote|div|h[1-6])\b/i', $content ) ) {
+		$content = wpautop( $content );
+	}
 	$content = wp_kses(
 		$content,
 		fsm_faq_answer_allowed_html(),
