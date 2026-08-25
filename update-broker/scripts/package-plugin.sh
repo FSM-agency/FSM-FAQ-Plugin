@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Build a WordPress-ready zip with root folder fsm-faq/.
+# Explicit allowlist only — never copy root dotfiles (.env, .npmrc, .aws, etc.).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -17,23 +18,22 @@ STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
 mkdir -p "$STAGE/fsm-faq"
-# Copy plugin files (exclude broker/tooling).
-shopt -s dotglob nullglob
-for item in "$ROOT"/*; do
-  base="$(basename "$item")"
-  case "$base" in
-    .git|.github|update-broker|node_modules|.DS_Store|.cursor) continue ;;
-  esac
-  cp -a "$item" "$STAGE/fsm-faq/"
-done
-# Hidden files at root except .git
-for item in "$ROOT"/.[!.]*; do
-  [[ -e "$item" ]] || continue
-  base="$(basename "$item")"
-  case "$base" in
-    .git|.github|.cursor|.DS_Store) continue ;;
-  esac
-  cp -a "$item" "$STAGE/fsm-faq/" 2>/dev/null || true
+
+# Only ship WordPress plugin runtime files. Do not copy hidden root files.
+ALLOWLIST=(
+  fsm-faq.php
+  readme.txt
+  assets
+  includes
+  plugin-update-checker-5.6
+  vendor
+)
+
+for name in "${ALLOWLIST[@]}"; do
+  src="$ROOT/$name"
+  if [[ -e "$src" ]]; then
+    cp -a "$src" "$STAGE/fsm-faq/"
+  fi
 done
 
 ZIP_PATH="$OUT_DIR/fsm-faq-${VERSION}.zip"
