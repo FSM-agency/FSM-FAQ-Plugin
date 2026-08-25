@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.1
+Stable tag: 1.1.4
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -20,6 +20,35 @@ Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For 
 * Admin list column: "Assigned to Pages" with links.
 
 Use a parent section with class `faq-section` and Divi visibility based on custom field `_has_faqs` so the section is hidden when the page has no FAQs.
+
+== Settings (FAQs -> Settings) ==
+
+A no-code settings page (FAQs -> Settings, requires manage_options) controls display without touching the theme:
+
+* **Brand colors** – Toggle background (closed), toggle background (hover), toggle background (open), question text, and toggle icon color. Applied to both the Divi toggle markup and the generic accordion. The question and its answer share one background so each toggle reads as a single connected unit.
+* **Toggle icon** – Choose an icon library (ET Modules built-in Divi font, Font Awesome, or bundled SVG) and an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon). Font Awesome is loaded from a CDN only when selected (filterable via `fsm_faq_fontawesome_url`); SVG uses lightweight icons bundled with the plugin.
+* **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
+* **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default), and spacing between items. Only one FAQ is open at a time either way.
+
+Note: Divi's accordion always keeps one item open. Closing the currently open item is added by this plugin (a scoped port of Foundation's `divi-accordion-close.js`) unless the WCAG kit is already loaded, in which case the plugin skips its copy so both scripts do not fire on the same click. Unchecking the setting restores default Divi behavior on sites without the kit.
+* **Structured data** – See below.
+
+Changing settings automatically invalidates the FAQ output cache.
+
+== FAQ ordering ==
+
+* **Global order** – Drag-and-drop the rows on the All FAQs screen to set the default order (stored in menu_order). No extra plugin (e.g. Intuitive/Simple Custom Post Order) is required. Ordering is disabled while searching or filtering the list.
+* **Per-page order** – When a page's ACF "Page FAQs" relationship is populated, its editor-defined order takes precedence for that page. Otherwise the global drag-and-drop order is used.
+
+== Structured data / SEO plugin schema ==
+
+The "FAQ schema output" setting controls FAQPage JSON-LD:
+
+* **Output from this plugin (default)** – Inline FAQPage JSON-LD after the FAQ markup, matching exactly what is rendered.
+* **Merge into active SEO plugin schema graph** – Injects FAQ entities into Yoast SEO, Rank Math, or All in One SEO instead of emitting inline JSON-LD. Falls back to plugin output if no supported SEO plugin is active.
+* **Do not output FAQ schema** – For sites that manage FAQ schema elsewhere.
+
+Output only one FAQ schema per page. If a page also uses an SEO plugin's own FAQ block, set this to "Do not output" (or remove the block) to avoid duplicate-schema warnings.
 
 == Installation ==
 
@@ -48,6 +77,21 @@ Production installs receive updates from the FSM Cloudflare update broker (not G
 Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the repo private. Details in update-broker/CUTOVER.md.
 
 == Changelog ==
+
+= 1.1.4 =
+* Security: Harden FAQ capabilities and content escaping.
+* Chore: Version bump so branch-based staging updates pick up the latest commits.
+
+= 1.1.3 =
+* Fix: Divi close-on-click now matches Foundation's WCAG kit script (direct bind + slideToggle) and skips loading when that kit is already present, so the two handlers cannot reverse each other.
+
+= 1.1.2 =
+* New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, border thickness/color, first-open behavior, corner radius, and item spacing.
+* New: Toggle icon libraries – ET Modules (Divi font), Font Awesome, and bundled SVG – applied to both Divi and generic accordion markup.
+* New: Open FAQs can be closed by clicking them again (setting, enabled by default), including on the Divi toggle markup where Divi normally prevents it.
+* New: Native drag-and-drop ordering on the All FAQs screen (menu_order); ACF "Page FAQs" relationship order takes precedence per page.
+* New: FAQ schema output modes – inline JSON-LD (default), merge into Yoast/Rank Math/All in One SEO graph, or off.
+* Improvement: FAQ output cache now busts on content, order, and settings changes.
 
 = 1.1.1 =
 * Harden release packaging: explicit allowlist so root secret files cannot ship in the public update zip.

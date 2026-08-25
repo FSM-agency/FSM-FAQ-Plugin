@@ -8,6 +8,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
+ * Cache token appended to FAQ output cache keys. Combines the plugin version, a
+ * bumpable cache buster (content/order changes), and a hash of display settings
+ * (styling changes) so cached HTML is invalidated whenever any of them change.
+ *
+ * @return string Cache token.
+ * @since 1.1.0
+ */
+function fsm_faq_cache_token() {
+	$buster        = (int) get_option( 'fsm_faq_cache_buster', 1 );
+	$settings_hash = function_exists( 'fsm_faq_settings_hash' ) ? fsm_faq_settings_hash() : '0';
+	return FSM_FAQ_VERSION . '_' . $buster . '_' . $settings_hash;
+}
+
+/**
+ * Bump the cache buster so all cached FAQ output is invalidated on the next request.
+ *
+ * @since 1.1.0
+ */
+function fsm_faq_bump_cache() {
+	update_option( 'fsm_faq_cache_buster', ( (int) get_option( 'fsm_faq_cache_buster', 1 ) ) + 1 );
+}
+
+/**
  * Checks if any FAQs are assigned to a specific post ID.
  *
  * @param int|null $post_id Post ID to check. Defaults to current post ID.
@@ -82,8 +105,11 @@ function fsm_update_faq_status_on_save( $post_id, $post ) {
 		} else {
 			delete_post_meta( $page_id, '_has_faqs' );
 		}
-		wp_cache_delete( 'fsm_faqs_' . $page_id, '' );
 	}
+
+	// Cache keys are versioned + settings-hashed, so bump the global buster to
+	// invalidate any affected FAQ output (replaces the previous un-versioned delete).
+	fsm_faq_bump_cache();
 }
 add_action( 'save_post', 'fsm_update_faq_status_on_save', 10, 2 );
 

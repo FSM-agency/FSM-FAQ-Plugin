@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FSM FAQ
  * Description: Custom FAQ post type with ACF fields, page assignment, and [fsm_display_faqs] shortcode. Requires Advanced Custom Fields Pro.
- * Version: 1.1.1
+ * Version: 1.1.4
  * Author: Full Spectrum Marketing
  * Author URI: https://fsm.agency
  * Text Domain: fsm-faq
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'FSM_FAQ_VERSION', '1.1.1' );
+define( 'FSM_FAQ_VERSION', '1.1.4' );
 define( 'FSM_FAQ_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
@@ -42,7 +42,10 @@ function fsm_faq_bootstrap() {
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-cpt.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-acf-fields.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-admin.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-settings.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-schema.php';
 	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-shortcode.php';
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-order.php';
 }
 
 function fsm_faq_acf_required_notice() {
@@ -53,4 +56,16 @@ function fsm_faq_acf_required_notice() {
 	echo '<div class="notice notice-warning"><p>';
 	echo esc_html__( 'FSM FAQ requires Advanced Custom Fields Pro. Install and activate ACF Pro to use FAQ fields and the shortcode.', 'fsm-faq' );
 	echo '</p></div>';
+}
+
+/**
+ * Grant FAQ capabilities on activation so Editors/Admins can manage FAQs
+ * immediately, even before the first admin_init after ACF is available.
+ *
+ * @since 1.1.3
+ */
+register_activation_hook( __FILE__, 'fsm_faq_activate' );
+function fsm_faq_activate() {
+	require_once FSM_FAQ_PATH . 'includes/class-fsm-faq-cpt.php';
+	fsm_faq_grant_capabilities();
 }
