@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FSM FAQ
  * Description: Custom FAQ post type with ACF fields, page assignment, and [fsm_display_faqs] shortcode. Requires Advanced Custom Fields Pro.
- * Version: 1.0.5
+ * Version: 1.1.0
  * Author: Full Spectrum Marketing
  * Author URI: https://fsm.agency
  * Text Domain: fsm-faq
@@ -14,12 +14,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'FSM_FAQ_VERSION', '1.0.5' );
+define( 'FSM_FAQ_VERSION', '1.1.0' );
 define( 'FSM_FAQ_PATH', plugin_dir_path( __FILE__ ) );
 
 /**
- * GitHub-based updates. Uses FSM repo by default; no wp-config needed.
+ * Updates via FSM Cloudflare broker (Plugin Update Checker).
  * PUC must be present in vendor/plugin-update-checker/ or plugin-update-checker-5.6/.
+ * Override with FSM_FAQ_UPDATE_URL, or agency GitHub override (see GITHUB_UPDATES.md).
  */
 $puc_loader = FSM_FAQ_PATH . 'vendor/plugin-update-checker/plugin-update-checker.php';
 if ( ! file_exists( $puc_loader ) ) {
