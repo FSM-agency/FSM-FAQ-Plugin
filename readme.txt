@@ -79,19 +79,17 @@ Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the re
 == Changelog ==
 
 = 1.1.4 =
+* New: Settings page (FAQs → Settings) for brand colors, toggle icons (ET Modules / Font Awesome / SVG), border thickness/color, first-open and closable-toggle behavior, corner radius, and item spacing.
+* New: Native drag-and-drop ordering on the All FAQs screen (`menu_order`); ACF Page FAQs relationship order takes precedence per page when set.
+* New: FAQ schema output modes — inline JSON-LD (default), merge into Yoast / Rank Math / All in One SEO, or off.
 * Security: Harden FAQ capabilities and content escaping.
-* Chore: Version bump so branch-based staging updates pick up the latest commits.
+* Updates: Production installs use the FSM Cloudflare update broker (no per-site GitHub tokens). Agency GitHub override retained when both `FSM_FAQ_GITHUB_REPO` and `FSM_FAQ_GITHUB_TOKEN` are set.
 
 = 1.1.3 =
-* Fix: Divi close-on-click now matches Foundation's WCAG kit script (direct bind + slideToggle) and skips loading when that kit is already present, so the two handlers cannot reverse each other.
+* Fix: Divi close-on-click matches Foundation’s WCAG kit script and skips loading when that kit is already present.
 
 = 1.1.2 =
-* New: Settings page (FAQs -> Settings) for toggle background colors (closed/hover/open), question text, toggle icon library/style, border thickness/color, first-open behavior, corner radius, and item spacing.
-* New: Toggle icon libraries – ET Modules (Divi font), Font Awesome, and bundled SVG – applied to both Divi and generic accordion markup.
-* New: Open FAQs can be closed by clicking them again (setting, enabled by default), including on the Divi toggle markup where Divi normally prevents it.
-* New: Native drag-and-drop ordering on the All FAQs screen (menu_order); ACF "Page FAQs" relationship order takes precedence per page.
-* New: FAQ schema output modes – inline JSON-LD (default), merge into Yoast/Rank Math/All in One SEO graph, or off.
-* Improvement: FAQ output cache now busts on content, order, and settings changes.
+* Iterative settings/ordering preview builds (superseded by 1.1.4).
 
 = 1.1.1 =
 * Harden release packaging: explicit allowlist so root secret files cannot ship in the public update zip.
