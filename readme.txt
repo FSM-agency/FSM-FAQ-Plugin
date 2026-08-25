@@ -4,7 +4,7 @@ Contributors: fullspectrummarketing
 Requires at least: 5.9
 Tested up to: 6.4
 Requires PHP: 8.0
-Stable tag: 1.1.5
+Stable tag: 1.1.6
 License: GPLv2 or later
 
 Custom FAQ post type with page assignment and [fsm_display_faqs] shortcode. For use with FSM Foundation theme and ACF Pro.
@@ -77,6 +77,9 @@ Production installs receive updates from the FSM Cloudflare update broker (not G
 Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the repo private. Details in update-broker/CUTOVER.md.
 
 == Changelog ==
+
+= 1.1.6 =
+* Fix: When Page FAQs exceeds the query limit, keep globally earlier FAQs (by `menu_order`) instead of dropping them based on ACF relationship list order.
 
 = 1.1.5 =
 * Fix: All FAQs drag-and-drop uses Screen Options `edit_faq_per_page` for pagination offsets so incomplete last pages no longer corrupt global `menu_order`.
