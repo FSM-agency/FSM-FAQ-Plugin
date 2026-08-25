@@ -16,34 +16,30 @@ Production URL (after DNS): `https://updates.fullspectrummarketing.com/fsm-faq.j
 
 ## Deploy (FSM Cloudflare account)
 
+KV namespace **fsm-faq-update-broker** is already created on the FSM account:
+
+- id: `b40e905330c047dd920002daa7c411f8` (wired in `wrangler.jsonc`)
+
+R2 is optional and not enabled on the account yet; zips are stored in KV.
+
 ```bash
 cd update-broker
 npm install
-npx wrangler login   # or set CLOUDFLARE_API_TOKEN
-# Create KV namespace and paste id into wrangler.jsonc:
-npx wrangler kv namespace create STORE
+export CLOUDFLARE_API_TOKEN=…   # or: npx wrangler login
+npx wrangler deploy
 npx wrangler secret put SYNC_SECRET
 # Optional, for private-repo GitHub pulls:
 npx wrangler secret put GITHUB_TOKEN
-npx wrangler deploy
 ```
 
-Map custom domain `updates.fullspectrummarketing.com` to this Worker in the Cloudflare dashboard (or add a `routes` / `domains` entry in `wrangler.jsonc`).
+Map custom domain `updates.fullspectrummarketing.com` to this Worker in the Cloudflare dashboard.
 
 Set GitHub Actions secrets on this repo:
 
 - `FSM_FAQ_BROKER_URL` — e.g. `https://updates.fullspectrummarketing.com`
 - `FSM_FAQ_BROKER_SYNC_SECRET` — same value as Worker `SYNC_SECRET`
 
-## Temporary preview (agent / no account yet)
-
-```bash
-cd update-broker
-npm install
-npx wrangler deploy --temporary --var SYNC_SECRET:local-dev-secret
-```
-
-Claim the preview within 60 minutes using the Claim URL Wrangler prints, then redeploy with a real account and KV namespace id.
+Full cutover (bridge release → soak → privatize): see [CUTOVER.md](CUTOVER.md).
 
 ## Manual sync
 
@@ -54,6 +50,12 @@ SYNC_SECRET=… \
 node scripts/sync-release.mjs 1.1.0
 ```
 
-## Cutover reminder
+## Temporary preview (agents without account tokens)
 
-Do **not** make the GitHub repo private until sites are on the bridge plugin version that points at this broker.
+```bash
+npx wrangler kv namespace create STORE --temporary
+# paste id into wrangler.jsonc, then:
+npx wrangler deploy --temporary --var SYNC_SECRET:local-dev-secret
+```
+
+Claim within 60 minutes if you want to keep that preview account. Prefer deploying to the real FSM account with `CLOUDFLARE_API_TOKEN` instead.
