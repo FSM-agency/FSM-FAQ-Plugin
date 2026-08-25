@@ -63,8 +63,9 @@ function fsm_faq_get_query_limit() {
 /**
  * Get FAQ items and schema data for a post. Shared by both shortcodes.
  *
- * Answer HTML is sanitized with wpautop and a tight allowlist (not the_content)
- * so schema and the toggle share the same safe markup, including tables and images.
+ * Answer HTML is sanitized with a tight allowlist (not the_content). wpautop runs
+ * only when the stored answer has no block-level HTML yet, so schema and the toggle
+ * share the same safe markup without double-wrapping paragraphs.
  *
  * @param int $post_id Current page/post ID.
  * @return array{ items: array, schema_questions: array } Empty items/schema_questions on failure.
@@ -82,19 +83,21 @@ function fsm_faq_get_faq_data( $post_id ) {
 
 	$query_limit = fsm_faq_get_query_limit();
 
-	// Per-page order: when the page's ACF "Page FAQs" relationship is populated, use
-	// that editor-defined order. Otherwise fall back to the global menu_order set via
-	// the FAQ list drag-and-drop.
-	$ordered_ids = get_field( 'page_faqs', $post_id );
-	$ordered_ids = ( is_array( $ordered_ids ) ) ? array_values( array_filter( array_map( 'absint', $ordered_ids ) ) ) : array();
+	// Membership: when the page's ACF "Page FAQs" relationship is populated, use those
+	// IDs (bidirectional sync keeps this set for normal Display On assignments). Always
+	// order by global menu_order from All FAQs drag-and-drop — do not use post__in order,
+	// which would ignore menu_order whenever page_faqs is non-empty.
+	$member_ids = get_field( 'page_faqs', $post_id );
+	$member_ids = ( is_array( $member_ids ) ) ? array_values( array_filter( array_map( 'absint', $member_ids ) ) ) : array();
 
-	if ( ! empty( $ordered_ids ) ) {
-		$ordered_ids = array_slice( $ordered_ids, 0, $query_limit );
-		$args        = array(
+	if ( ! empty( $member_ids ) ) {
+		$member_ids = array_slice( $member_ids, 0, $query_limit );
+		$args       = array(
 			'post_type'              => 'faq',
 			'posts_per_page'         => $query_limit,
-			'post__in'               => $ordered_ids,
-			'orderby'                => 'post__in',
+			'post__in'               => $member_ids,
+			'orderby'                => 'menu_order',
+			'order'                  => 'ASC',
 			'post_status'            => 'publish',
 			'no_found_rows'          => true,
 			'update_post_meta_cache' => false,
