@@ -28,7 +28,7 @@ A no-code settings page (FAQs -> Settings, requires manage_options) controls dis
 * **Brand colors** – Toggle background (closed), toggle background (hover), toggle background (open), question text, and toggle icon color. Applied to both the Divi toggle markup and the generic accordion. The question and its answer share one background so each toggle reads as a single connected unit.
 * **Toggle icon** – Choose an icon library (ET Modules built-in Divi font or bundled SVG), an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon), and icon size in pixels (8–64, default 16).
 * **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
-* **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default), and spacing between items. Only one FAQ is open at a time either way.
+* **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default; also shows the open-state/close icon), and spacing between items. Only one FAQ is open at a time either way.
 
 Note: Divi's accordion always keeps one item open. Closing the currently open item is added by this plugin (a scoped port of Foundation's `divi-accordion-close.js`) unless the WCAG kit is already loaded, in which case the plugin skips its copy so both scripts do not fire on the same click. Unchecking the setting restores default Divi behavior on sites without the kit.
 * **Structured data** – See below.
@@ -80,9 +80,10 @@ Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the re
 
 = 1.1.8 =
 * New: Icon size setting (px) under FAQs → Settings → Toggle Icon, applied to Divi and generic accordion icons.
+* Fix: Open-state (close) toggle icon is shown only when “Allow an open FAQ to be closed…” is checked; otherwise it stays hidden like default Divi.
 
 = 1.1.7 =
-* Fix: Keep the open-item toggle icon visible — Divi accordion CSS sets `display:none` on `.et_pb_toggle_open > .et_pb_toggle_title::before`; Settings-driven SVG/ET icons now force `display:inline-block !important` on open state.
+* Fix: Keep the open-item toggle icon visible when closing is allowed — Divi accordion CSS sets `display:none` on `.et_pb_toggle_open > .et_pb_toggle_title::before`; Settings-driven SVG/ET icons now force `display:inline-block !important` on open state when allow_close is on.
 
 = 1.1.6 =
 * Fix: When Page FAQs exceeds the query limit, keep globally earlier FAQs (by `menu_order`) instead of dropping them based on ACF relationship list order.

@@ -85,6 +85,11 @@
 	content: '\02796'; /* Unicode minus (-) fallback */
 }
 
+/* Hide open-state icon when closing is disabled (matches Divi default). */
+.fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
+	content: none;
+}
+
 /* Active (open) state – question and answer share this background */
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active,
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,

@@ -370,7 +370,7 @@ function fsm_faq_render_settings_page() {
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
 							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
 						</label>
-						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked. On Foundation sites the WCAG kit already provides this; the plugin will not load a second copy of that script.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked and the open-item icon is hidden. On Foundation sites the WCAG kit already provides close-on-click; the plugin will not load a second copy of that script.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -618,7 +618,8 @@ function fsm_faq_build_generic_icon_css( $s ) {
 	if ( ! isset( $defs[ $lib ][ $pair ] ) ) {
 		return '';
 	}
-	$glyph = $defs[ $lib ][ $pair ];
+	$glyph         = $defs[ $lib ][ $pair ];
+	$show_open_icon = isset( $s['allow_close'] ) ? ( '1' === (string) $s['allow_close'] ) : true;
 
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
@@ -626,20 +627,35 @@ function fsm_faq_build_generic_icon_css( $s ) {
 		if ( ! $closed || ! $open ) {
 			return '';
 		}
-		return sprintf(
-			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"";width:var(--fsm-faq-icon-size);height:var(--fsm-faq-icon-size);font-size:var(--fsm-faq-icon-size);background-color:var(--fsm-faq-icon-color);-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}'
-			. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{-webkit-mask:url(\'%2$s\') no-repeat center/contain;mask:url(\'%2$s\') no-repeat center/contain;}',
-			$closed,
-			$open
+		$css = sprintf(
+			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"";width:var(--fsm-faq-icon-size);height:var(--fsm-faq-icon-size);font-size:var(--fsm-faq-icon-size);background-color:var(--fsm-faq-icon-color);-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+			$closed
 		);
+		if ( $show_open_icon ) {
+			$css .= sprintf(
+				'.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+				$open
+			);
+		} else {
+			// No close affordance when allow_close is off — hide icon on open items.
+			$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;}';
+		}
+		return $css;
 	}
 
-	return sprintf(
-		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:ETmodules;font-size:var(--fsm-faq-icon-size);color:var(--fsm-faq-icon-color);}'
-		. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%2$s";}',
-		$glyph['closed'],
-		$glyph['open']
+	$css = sprintf(
+		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:ETmodules;font-size:var(--fsm-faq-icon-size);color:var(--fsm-faq-icon-color);}',
+		$glyph['closed']
 	);
+	if ( $show_open_icon ) {
+		$css .= sprintf(
+			'.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%1$s";}',
+			$glyph['open']
+		);
+	} else {
+		$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;}';
+	}
+	return $css;
 }
 
 /**
@@ -695,9 +711,10 @@ function fsm_faq_build_divi_icon_css( $s ) {
 	if ( ! isset( $defs[ $lib ][ $pair ] ) ) {
 		return '';
 	}
-	$glyph = $defs[ $lib ][ $pair ];
-	$color = fsm_faq_css_hex( $s['icon_color'] );
-	$size  = isset( $s['icon_size'] ) ? max( 8, min( 64, (int) $s['icon_size'] ) ) : 16;
+	$glyph          = $defs[ $lib ][ $pair ];
+	$color          = fsm_faq_css_hex( $s['icon_color'] );
+	$size           = isset( $s['icon_size'] ) ? max( 8, min( 64, (int) $s['icon_size'] ) ) : 16;
+	$show_open_icon = isset( $s['allow_close'] ) ? ( '1' === (string) $s['allow_close'] ) : true;
 
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
@@ -705,26 +722,41 @@ function fsm_faq_build_divi_icon_css( $s ) {
 		if ( ! $closed || ! $open ) {
 			return '';
 		}
-		// Divi accordion CSS hides the open-item ::before (display:none). Force it
-		// visible and swap the full mask shorthand so the close icon always renders.
-		return sprintf(
-			'.fsm-faq-divi .et_pb_toggle_title:before{content:"" !important;display:inline-block !important;width:%4$dpx;height:%4$dpx;font-size:%4$dpx;background-color:%3$s;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}'
-			. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:inline-block !important;-webkit-mask:url(\'%2$s\') no-repeat center/contain;mask:url(\'%2$s\') no-repeat center/contain;}',
+		// Base rule uses display:!important so closed icons win over Divi. Open-state
+		// close icon is shown only when allow_close is on; otherwise hide it (Divi-
+		// like) because our base rule would otherwise keep the closed icon visible.
+		$css = sprintf(
+			'.fsm-faq-divi .et_pb_toggle_title:before{content:"" !important;display:inline-block !important;width:%3$dpx;height:%3$dpx;font-size:%3$dpx;background-color:%2$s;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
 			$closed,
-			$open,
 			$color,
 			$size
 		);
+		if ( $show_open_icon ) {
+			$css .= sprintf(
+				'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:inline-block !important;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+				$open
+			);
+		} else {
+			$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:none !important;}';
+		}
+		return $css;
 	}
 
-	return sprintf(
-		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;display:inline-block !important;font-family:ETmodules !important;font-size:%4$dpx !important;color:%2$s !important;}'
-		. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%3$s" !important;display:inline-block !important;}',
+	$css = sprintf(
+		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;display:inline-block !important;font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;}',
 		$glyph['closed'],
 		$color,
-		$glyph['open'],
 		$size
 	);
+	if ( $show_open_icon ) {
+		$css .= sprintf(
+			'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%1$s" !important;display:inline-block !important;}',
+			$glyph['open']
+		);
+	} else {
+		$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:none !important;}';
+	}
+	return $css;
 }
 
 /**
