@@ -98,8 +98,8 @@
 /* Hide open-state icon when closing is disabled (matches Divi default). */
 .fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::before,
 .fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
-	content: none;
-	opacity: 0;
+	content: none !important;
+	opacity: 0 !important;
 }
 
 /* Active (open) state – question and answer share this background */

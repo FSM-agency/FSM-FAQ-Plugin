@@ -207,8 +207,10 @@ function fsm_faq_render_divi_markup( $items ) {
 	}
 
 	$settings    = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_close' => '1' );
-	$first_open  = ! empty( $settings['first_open'] );
-	$allow_close = empty( $settings['allow_close'] ) ? '0' : '1';
+	$first_open  = function_exists( 'fsm_faq_is_allow_close_enabled' )
+		? ( isset( $settings['first_open'] ) && '1' === (string) $settings['first_open'] )
+		: ! empty( $settings['first_open'] );
+	$allow_close = function_exists( 'fsm_faq_is_allow_close_enabled' ) && fsm_faq_is_allow_close_enabled( $settings ) ? '1' : '0';
 
 	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$i   = 0;
@@ -244,8 +246,8 @@ function fsm_faq_render_generic_markup( $items ) {
 	}
 
 	$settings    = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_close' => '1' );
-	$first_open  = empty( $settings['first_open'] ) ? '0' : '1';
-	$allow_close = empty( $settings['allow_close'] ) ? '0' : '1';
+	$first_open  = ( isset( $settings['first_open'] ) && '1' === (string) $settings['first_open'] ) ? '1' : '0';
+	$allow_close = function_exists( 'fsm_faq_is_allow_close_enabled' ) && fsm_faq_is_allow_close_enabled( $settings ) ? '1' : '0';
 
 	$block_id = 'fsm-faq-' . uniqid();
 	$html     = '<div class="fsm-faq-accordion" id="' . esc_attr( $block_id ) . '" data-first-open="' . esc_attr( $first_open ) . '" data-allow-close="' . esc_attr( $allow_close ) . '">';
