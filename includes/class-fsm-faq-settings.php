@@ -387,7 +387,7 @@ function fsm_faq_render_settings_page() {
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
 							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
 						</label>
-						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked and the open-item icon is hidden. On Foundation sites the WCAG kit already provides close-on-click; the plugin will not load a second copy of that script.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked matches default Divi behavior on [fsm_display_faqs], where an open toggle stays open until another is clicked and the open-item icon is hidden. This setting controls FAQ accordions even on Foundation sites that also load the WCAG kit close script.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>
