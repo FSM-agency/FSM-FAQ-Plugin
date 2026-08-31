@@ -274,6 +274,37 @@ function fsm_faq_render_generic_markup( $items ) {
 }
 
 /**
+ * Sync data-allow-close on Divi FAQ markup to the live close affordance.
+ *
+ * The Foundation kit enqueue state is request-time and is not part of
+ * fsm_faq_cache_token() (version + buster + settings only). Cached HTML can
+ * therefore keep data-allow-close="0" after the kit is present, which hides
+ * the close icon and lets the capture-phase handler block the kit.
+ *
+ * Cached HTML is left unchanged; only the returned markup is patched.
+ *
+ * @param string $html Cached or freshly rendered FAQ output.
+ * @return string HTML with data-allow-close synced on .fsm-faq-divi.
+ * @since 1.1.9
+ */
+function fsm_faq_sync_divi_allow_close_attr( $html ) {
+	if ( ! is_string( $html ) || '' === $html || false === strpos( $html, 'fsm-faq-divi' ) ) {
+		return $html;
+	}
+
+	$allow = ( function_exists( 'fsm_faq_is_divi_faq_close_afforded' ) && fsm_faq_is_divi_faq_close_afforded() ) ? '1' : '0';
+
+	$updated = preg_replace(
+		'/(<div class="fsm-faq-divi\b[^"]*" data-allow-close=")[01](")/',
+		'${1}' . $allow . '${2}',
+		$html,
+		1
+	);
+
+	return is_string( $updated ) ? $updated : $html;
+}
+
+/**
  * Shortcode: [fsm_display_faqs]
  *
  * Description: Displays FAQ posts assigned to the page. Uses Divi markup when Divi is active; otherwise generic accordion. Includes FAQ schema.
@@ -304,7 +335,7 @@ function fsm_display_faqs_shortcode() {
 	$cached_output = wp_cache_get( $cache_key );
 
 	if ( false !== $cached_output ) {
-		return $cached_output;
+		return fsm_faq_sync_divi_allow_close_attr( $cached_output );
 	}
 
 	$data = fsm_faq_get_faq_data( $current_post_id );
@@ -321,9 +352,10 @@ function fsm_display_faqs_shortcode() {
 	$final_output  = fsm_faq_get_inline_schema_script( $data['schema_questions'] );
 	$final_output .= $html;
 
+	// Cache the render-time HTML; live kit enqueue may still differ on later hits.
 	wp_cache_set( $cache_key, $final_output, '', HOUR_IN_SECONDS );
 
-	return $final_output;
+	return fsm_faq_sync_divi_allow_close_attr( $final_output );
 }
 
 /**
