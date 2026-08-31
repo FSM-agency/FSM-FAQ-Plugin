@@ -436,6 +436,9 @@ function fsm_faq_seo_plugin_label( $slug ) {
  * ET Modules values are font glyph codepoints; SVG values are bundled file
  * bundled file basenames under assets/icons/.
  *
+ * Directional pairs (chevron/caret/angle) animate via rotate using the closed
+ * glyph only; the open glyph remains for Divi/legacy swap fallbacks if needed.
+ *
  * @return array<string,array<string,array<string,string>>>
  * @since 1.1.0
  */
@@ -454,6 +457,33 @@ function fsm_faq_icon_definitions() {
 			'angle'      => array( 'closed' => 'chevrons-down', 'open' => 'chevrons-up' ),
 		),
 	);
+}
+
+/**
+ * Motion strategy for an icon pair.
+ *
+ * - rotate: single closed glyph, 180° on open (chevron/caret/angle)
+ * - morph:  two-bar CSS plus→minus (generic accordion only; Divi uses swap)
+ * - swap:   instant closed/open glyph change (Divi plus/minus)
+ * - none:   no icon
+ *
+ * @param string $pair Icon pair key.
+ * @return string One of rotate|morph|swap|none.
+ * @since 1.1.8
+ */
+function fsm_faq_icon_motion( $pair ) {
+	switch ( $pair ) {
+		case 'chevron':
+		case 'caret':
+		case 'angle':
+			return 'rotate';
+		case 'plus_minus':
+			return 'morph';
+		case 'none':
+			return 'none';
+		default:
+			return 'swap';
+	}
 }
 
 /**
@@ -603,16 +633,58 @@ function fsm_faq_build_generic_color_css( $s ) {
 /**
  * Generic accordion toggle icon CSS.
  *
+ * Motion by pair: rotate (chevron/caret/angle), morph (plus/minus two-bar),
+ * or none. Clears ::before when not morphing so bars do not linger.
+ *
  * @param array $s Settings.
  * @return string CSS.
  * @since 1.1.0
  */
 function fsm_faq_build_generic_icon_css( $s ) {
-	$pair = $s['icon_pair'];
-	if ( 'none' === $pair ) {
-		return '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}'
+	$pair   = $s['icon_pair'];
+	$motion = fsm_faq_icon_motion( $pair );
+
+	if ( 'none' === $motion ) {
+		return '.fsm-faq-accordion .fsm-faq-accordion__btn::before,'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}'
 			. '.fsm-faq-accordion .fsm-faq-accordion__title{padding-right:0;}'
 			. '.fsm-faq-accordion .fsm-faq-accordion__btn{min-height:0;padding-top:1em;padding-bottom:1em;}';
+	}
+
+	$show_open_icon = isset( $s['allow_close'] ) ? ( '1' === (string) $s['allow_close'] ) : true;
+
+	// Two-bar plus → minus morph (library-agnostic).
+	if ( 'morph' === $motion ) {
+		$bar = 'max(2px,calc(var(--fsm-faq-icon-size)*0.125))';
+		$css = '.fsm-faq-accordion .fsm-faq-accordion__btn::before,'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'content:"";display:block;position:absolute;top:50%;right:1.25em;'
+			. 'padding:0;margin:0;border:none;box-sizing:border-box;'
+			. 'background-color:var(--fsm-faq-icon-color);'
+			. 'transition:transform 0.25s ease,opacity 0.2s ease,background-color 0.2s ease;'
+			. '-webkit-mask:none;mask:none;font-size:0;color:transparent;line-height:0;'
+			. '}'
+			// Horizontal bar.
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::before{'
+			. 'width:var(--fsm-faq-icon-size);height:' . $bar . ';'
+			. 'transform:translateY(-50%);'
+			. '}'
+			// Vertical bar — centered in the icon slot.
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'width:' . $bar . ';height:var(--fsm-faq-icon-size);'
+			. 'right:calc(1.25em + (var(--fsm-faq-icon-size) - ' . $bar . ')/2);'
+			. 'transform:translateY(-50%);'
+			. '}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+			. 'transform:translateY(-50%) scaleY(0);'
+			. '}';
+
+		if ( ! $show_open_icon ) {
+			$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::before,'
+				. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;opacity:0;}';
+		}
+
+		return $css;
 	}
 
 	$defs = fsm_faq_icon_definitions();
@@ -620,35 +692,76 @@ function fsm_faq_build_generic_icon_css( $s ) {
 	if ( ! isset( $defs[ $lib ][ $pair ] ) ) {
 		return '';
 	}
-	$glyph         = $defs[ $lib ][ $pair ];
-	$show_open_icon = isset( $s['allow_close'] ) ? ( '1' === (string) $s['allow_close'] ) : true;
+	$glyph = $defs[ $lib ][ $pair ];
+
+	// Clear morph bars if switching away from plus/minus.
+	$clear_before = '.fsm-faq-accordion .fsm-faq-accordion__btn::before{content:none;}';
 
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
-		$open   = fsm_faq_svg_data_uri( $glyph['open'] );
-		if ( ! $closed || ! $open ) {
+		if ( ! $closed ) {
 			return '';
 		}
-		$css = sprintf(
-			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"";width:var(--fsm-faq-icon-size);height:var(--fsm-faq-icon-size);font-size:var(--fsm-faq-icon-size);background-color:var(--fsm-faq-icon-color);-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+		$css = $clear_before . sprintf(
+			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'content:"";width:var(--fsm-faq-icon-size);height:var(--fsm-faq-icon-size);'
+			. 'font-size:var(--fsm-faq-icon-size);background-color:var(--fsm-faq-icon-color);'
+			. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+			. 'transform:translateY(-50%%) rotate(0deg);'
+			. 'transition:transform 0.25s ease,color 0.2s ease,background-color 0.2s ease;'
+			. '}',
 			$closed
 		);
+
+		if ( 'rotate' === $motion ) {
+			if ( $show_open_icon ) {
+				$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+					. 'transform:translateY(-50%) rotate(180deg);'
+					. '}';
+			} else {
+				$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;}';
+			}
+			return $css;
+		}
+
+		// Fallback swap (unused for current pairs when motion is rotate/morph).
+		$open = fsm_faq_svg_data_uri( $glyph['open'] );
+		if ( ! $open ) {
+			return $css;
+		}
 		if ( $show_open_icon ) {
 			$css .= sprintf(
 				'.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
 				$open
 			);
 		} else {
-			// No close affordance when allow_close is off — hide icon on open items.
 			$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;}';
 		}
 		return $css;
 	}
 
-	$css = sprintf(
-		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:ETmodules;font-size:var(--fsm-faq-icon-size);color:var(--fsm-faq-icon-color);}',
+	// ET Modules font glyphs.
+	$css = $clear_before . sprintf(
+		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+		. 'content:"%1$s";font-family:ETmodules;font-size:var(--fsm-faq-icon-size);'
+		. 'color:var(--fsm-faq-icon-color);background:none;-webkit-mask:none;mask:none;'
+		. 'transform:translateY(-50%%) rotate(0deg);'
+		. 'transition:transform 0.25s ease,color 0.2s ease;'
+		. '}',
 		$glyph['closed']
 	);
+
+	if ( 'rotate' === $motion ) {
+		if ( $show_open_icon ) {
+			$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+				. 'transform:translateY(-50%) rotate(180deg);'
+				. '}';
+		} else {
+			$css .= '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:none;}';
+		}
+		return $css;
+	}
+
 	if ( $show_open_icon ) {
 		$css .= sprintf(
 			'.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%1$s";}',
@@ -698,13 +811,18 @@ function fsm_faq_build_divi_color_css( $s ) {
 /**
  * Divi toggle icon override CSS (targets .et_pb_toggle_title:before).
  *
+ * Directional pairs rotate the closed glyph; plus/minus keeps an instant
+ * closed/open swap (Divi only exposes one title ::before).
+ *
  * @param array $s Settings.
  * @return string CSS.
  * @since 1.1.0
  */
 function fsm_faq_build_divi_icon_css( $s ) {
-	$pair = $s['icon_pair'];
-	if ( 'none' === $pair ) {
+	$pair   = $s['icon_pair'];
+	$motion = fsm_faq_icon_motion( $pair );
+
+	if ( 'none' === $motion ) {
 		return '.fsm-faq-divi .et_pb_toggle_title:before{content:none !important;}';
 	}
 
@@ -717,25 +835,49 @@ function fsm_faq_build_divi_icon_css( $s ) {
 	$color          = fsm_faq_css_hex( $s['icon_color'] );
 	$size           = isset( $s['icon_size'] ) ? max( 8, min( 64, (int) $s['icon_size'] ) ) : 16;
 	$show_open_icon = isset( $s['allow_close'] ) ? ( '1' === (string) $s['allow_close'] ) : true;
+	// Divi cannot two-bar morph; treat morph as swap.
+	$use_rotate     = ( 'rotate' === $motion );
 
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
-		$open   = fsm_faq_svg_data_uri( $glyph['open'] );
-		if ( ! $closed || ! $open ) {
+		if ( ! $closed ) {
 			return '';
 		}
-		// Base rule uses display:!important so closed icons win over Divi. Open-state
-		// close icon is shown only when allow_close is on; otherwise hide it (Divi-
-		// like) because our base rule would otherwise keep the closed icon visible.
+
 		$css = sprintf(
-			'.fsm-faq-divi .et_pb_toggle_title:before{content:"" !important;display:inline-block !important;width:%3$dpx;height:%3$dpx;font-size:%3$dpx;background-color:%2$s;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+			'.fsm-faq-divi .et_pb_toggle_title:before{'
+			. 'content:"" !important;display:inline-block !important;'
+			. 'width:%3$dpx;height:%3$dpx;font-size:%3$dpx;background-color:%2$s;'
+			. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+			. 'transform:rotate(0deg);transition:transform 0.25s ease;'
+			. '}',
 			$closed,
 			$color,
 			$size
 		);
+
+		if ( $use_rotate ) {
+			if ( $show_open_icon ) {
+				$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{'
+					. 'display:inline-block !important;transform:rotate(180deg);'
+					. '}';
+			} else {
+				$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:none !important;}';
+			}
+			return $css;
+		}
+
+		// Plus/minus (and any swap pair): instant open glyph.
+		$open = fsm_faq_svg_data_uri( $glyph['open'] );
+		if ( ! $open ) {
+			return $css;
+		}
 		if ( $show_open_icon ) {
 			$css .= sprintf(
-				'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:inline-block !important;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}',
+				'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{'
+				. 'display:inline-block !important;'
+				. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+				. '}',
 				$open
 			);
 		} else {
@@ -744,15 +886,34 @@ function fsm_faq_build_divi_icon_css( $s ) {
 		return $css;
 	}
 
+	// ET Modules.
 	$css = sprintf(
-		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;display:inline-block !important;font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;}',
+		'.fsm-faq-divi .et_pb_toggle_title:before{'
+		. 'content:"%1$s" !important;display:inline-block !important;'
+		. 'font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;'
+		. 'transform:rotate(0deg);transition:transform 0.25s ease;'
+		. '}',
 		$glyph['closed'],
 		$color,
 		$size
 	);
+
+	if ( $use_rotate ) {
+		if ( $show_open_icon ) {
+			$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{'
+				. 'display:inline-block !important;transform:rotate(180deg);'
+				. '}';
+		} else {
+			$css .= '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{display:none !important;}';
+		}
+		return $css;
+	}
+
 	if ( $show_open_icon ) {
 		$css .= sprintf(
-			'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%1$s" !important;display:inline-block !important;}',
+			'.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{'
+			. 'content:"%1$s" !important;display:inline-block !important;'
+			. '}',
 			$glyph['open']
 		);
 	} else {

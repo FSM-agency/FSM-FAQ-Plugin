@@ -26,7 +26,7 @@ Use a parent section with class `faq-section` and Divi visibility based on custo
 A no-code settings page (FAQs -> Settings, requires manage_options) controls display without touching the theme:
 
 * **Brand colors** – Toggle background (closed), toggle background (hover), toggle background (open), question text, and toggle icon color. Applied to both the Divi toggle markup and the generic accordion. The question and its answer share one background so each toggle reads as a single connected unit.
-* **Toggle icon** – Choose an icon library (ET Modules built-in Divi font or bundled SVG), an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon), and icon size in pixels (8–64, default 16).
+* **Toggle icon** – Choose an icon library (ET Modules built-in Divi font or bundled SVG), an icon style (Plus/Minus, Chevron, Caret, Angle, or No icon), and icon size in pixels (8–64, default 16). Chevron/caret/angle rotate on open; Plus/Minus morphs on the generic accordion and swaps glyphs on Divi.
 * **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
 * **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default; also shows the open-state/close icon), and spacing between items. Only one FAQ is open at a time either way.
 
@@ -82,6 +82,7 @@ Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the re
 * New: Icon size setting (px) under FAQs → Settings → Toggle Icon, applied to Divi and generic accordion icons.
 * Fix: Open-state (close) toggle icon is shown only when “Allow an open FAQ to be closed…” is checked; otherwise it stays hidden like default Divi.
 * Fix: Generic accordion title padding and button height scale with icon size so large icons (up to 64px) do not overlap question text or get clipped by `overflow:hidden`.
+* New: Animated toggle icons — chevron/caret/angle rotate 180° in place; Plus/Minus morphs via CSS bars on the generic accordion and still swaps glyphs instantly on Divi.
 
 = 1.1.7 =
 * Fix: Keep the open-item toggle icon visible when closing is allowed — Divi accordion CSS sets `display:none` on `.et_pb_toggle_open > .et_pb_toggle_title::before`; Settings-driven SVG/ET icons now force `display:inline-block !important` on open state when allow_close is on.
