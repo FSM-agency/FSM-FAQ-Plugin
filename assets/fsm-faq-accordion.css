@@ -1,1 +1,115 @@
-PLACEHOLDER_CSS
+/**
+ * FSM FAQ – Generic accordion styles (theme-agnostic fallback).
+ * Scoped to .fsm-faq-accordion to avoid conflicts.
+ *
+ * @since 1.1.0
+ */
+
+.fsm-faq-accordion {
+	width: 100%;
+	max-width: 100%;
+	/* Defaults; overridden by the plugin Settings page via inline custom properties. */
+	--fsm-faq-toggle-bg: #f4f4f4;
+	--fsm-faq-toggle-bg-hover: #e8e8e8;
+	--fsm-faq-toggle-bg-open: #e0e0e0;
+	--fsm-faq-toggle-text: #333333;
+	--fsm-faq-icon-color: #666666;
+	--fsm-faq-icon-size: 16px;
+	--fsm-faq-radius: 0px;
+	--fsm-faq-border-width: 0px;
+	--fsm-faq-border-color: transparent;
+}
+
+/*
+ * Toggle item – wraps the question and its answer as one unit, so the border and
+ * radius enclose both. overflow:hidden keeps the panel inside the rounded corners.
+ */
+.fsm-faq-accordion__item {
+	border: var(--fsm-faq-border-width) solid var(--fsm-faq-border-color);
+	border-radius: var(--fsm-faq-radius);
+	overflow: hidden;
+}
+
+/* Accordion button (question) */
+.fsm-faq-accordion__btn {
+	width: 100%;
+	padding: 1em 1.25em;
+	text-align: left;
+	font-size: 1rem;
+	line-height: 1.4;
+	font-weight: 600;
+	color: var(--fsm-faq-toggle-text);
+	background-color: var(--fsm-faq-toggle-bg);
+	cursor: pointer;
+	outline: none;
+	transition: background-color 0.2s ease, color 0.2s ease;
+	position: relative;
+	border: none;
+}
+
+.fsm-faq-accordion__btn:hover,
+.fsm-faq-accordion__btn:focus {
+	background-color: var(--fsm-faq-toggle-bg-hover);
+	color: var(--fsm-faq-toggle-text);
+}
+
+/* Question heading – scoped for styling */
+.fsm-faq-accordion__title {
+	margin: 0;
+	padding-right: 1.5em; /* space before ::after icon */
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	color: inherit;
+}
+
+/*
+ * Toggle icon via pseudo-element. The content/font/mask are supplied by the
+ * plugin Settings engine (inline CSS); these are safe fallbacks for when no
+ * icon library override is present.
+ */
+.fsm-faq-accordion__btn::after {
+	content: '\02795'; /* Unicode plus (+) fallback */
+	display: inline-block;
+	position: absolute;
+	right: 1.25em;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: var(--fsm-faq-icon-size, 16px);
+	line-height: 1;
+	color: var(--fsm-faq-icon-color);
+	transition: color 0.2s ease;
+}
+
+.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
+	content: '\02796'; /* Unicode minus (-) fallback */
+}
+
+/* Active (open) state – question and answer share this background */
+.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active,
+.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,
+.fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
+	background-color: var(--fsm-faq-toggle-bg-open);
+	color: var(--fsm-faq-toggle-text);
+}
+
+/* Panel (answer) – hidden by default; matches the open background */
+.fsm-faq-accordion__panel {
+	padding: 0 1.25em;
+	background-color: var(--fsm-faq-toggle-bg-open);
+	max-height: 0;
+	overflow: hidden;
+	transition: max-height 0.25s ease-out;
+}
+
+.fsm-faq-accordion__panel-inner {
+	padding: 1em 0 1.25em;
+}
+
+.fsm-faq-accordion__panel-inner p:first-child {
+	margin-top: 0;
+}
+
+.fsm-faq-accordion__panel-inner p:last-child {
+	margin-bottom: 0;
+}
