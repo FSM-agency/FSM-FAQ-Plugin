@@ -34,6 +34,7 @@ function fsm_faq_get_default_settings() {
 		'border_width'    => 0,
 		'icon_library'    => $is_divi ? 'et_modules' : 'svg',
 		'icon_pair'       => 'plus_minus',
+		'icon_size'       => 16,
 		'first_open'      => '1',
 		'allow_close'     => '1',
 		'border_radius'   => 0,
@@ -208,8 +209,44 @@ function fsm_faq_sanitize_settings( $input ) {
 	$clean['border_radius'] = isset( $input['border_radius'] ) ? min( 100, absint( $input['border_radius'] ) ) : $defaults['border_radius'];
 	$clean['item_spacing']  = isset( $input['item_spacing'] ) ? min( 100, absint( $input['item_spacing'] ) ) : $defaults['item_spacing'];
 	$clean['border_width']  = isset( $input['border_width'] ) ? min( 20, absint( $input['border_width'] ) ) : $defaults['border_width'];
+	$clean['icon_size']     = isset( $input['icon_size'] ) ? max( 8, min( 64, absint( $input['icon_size'] ) ) ) : $defaults['icon_size'];
 
 	return $clean;
+}
+
+/**
+ * Whether “allow close” is enabled in settings.
+ *
+ * Strict string compare — do not use empty(), which treats the saved value
+ * `'0'` as empty and would mis-detect the setting.
+ *
+ * @param array|null $settings Optional settings; defaults to fsm_faq_get_settings().
+ * @return bool
+ * @since 1.1.8
+ */
+function fsm_faq_is_allow_close_enabled( $settings = null ) {
+	if ( null === $settings ) {
+		$settings = fsm_faq_get_settings();
+	}
+	return isset( $settings['allow_close'] ) && '1' === (string) $settings['allow_close'];
+}
+
+/**
+ * Whether Divi FAQ markup should show the close affordance and allow close-on-click.
+ *
+ * True when the settings checkbox is on, OR when Foundation’s WCAG kit has
+ * enqueued `fsm-divi-accordion-close` (that script closes Divi accordions
+ * globally, so hiding the FAQ close icon would mismatch real behavior).
+ *
+ * @param array|null $settings Optional settings; defaults to fsm_faq_get_settings().
+ * @return bool
+ * @since 1.1.8
+ */
+function fsm_faq_is_divi_faq_close_afforded( $settings = null ) {
+	if ( fsm_faq_is_allow_close_enabled( $settings ) ) {
+		return true;
+	}
+	return fsm_faq_divi_close_script_already_loaded();
 }
 
 /**
@@ -312,6 +349,13 @@ function fsm_faq_render_settings_page() {
 						<p class="description"><?php echo esc_html__( 'The exact glyph depends on the selected icon library.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
+				<tr>
+					<th scope="row"><label for="fsm-faq-icon_size"><?php echo esc_html__( 'Icon size (px)', 'fsm-faq' ); ?></label></th>
+					<td>
+						<input type="number" min="8" max="64" step="1" id="fsm-faq-icon_size" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[icon_size]" value="<?php echo esc_attr( $s['icon_size'] ); ?>" class="small-text" />
+						<p class="description"><?php echo esc_html__( 'Size of the open/close toggle icon. Default is 16.', 'fsm-faq' ); ?></p>
+					</td>
+				</tr>
 			</table>
 
 			<h2 class="title"><?php echo esc_html__( 'Border &amp; Shape', 'fsm-faq' ); ?></h2>
@@ -361,7 +405,7 @@ function fsm_faq_render_settings_page() {
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
 							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
 						</label>
-						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. Unchecked matches default Divi behavior, where an open toggle stays open until another is clicked. On Foundation sites the WCAG kit already provides this; the plugin will not load a second copy of that script.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked hides that icon and blocks close-on-click on [fsm_display_faqs] — unless the Foundation WCAG kit’s divi-accordion-close script is enqueued, which closes Divi accordions globally; in that case the close icon stays visible so it matches real behavior.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>
@@ -427,6 +471,9 @@ function fsm_faq_seo_plugin_label( $slug ) {
  * ET Modules values are font glyph codepoints; SVG values are bundled file
  * bundled file basenames under assets/icons/.
  *
+ * Directional pairs (chevron/caret/angle) animate via rotate using the closed
+ * glyph only; the open glyph remains for Divi/legacy swap fallbacks if needed.
+ *
  * @return array<string,array<string,array<string,string>>>
  * @since 1.1.0
  */
@@ -445,6 +492,33 @@ function fsm_faq_icon_definitions() {
 			'angle'      => array( 'closed' => 'chevrons-down', 'open' => 'chevrons-up' ),
 		),
 	);
+}
+
+/**
+ * Motion strategy for an icon pair.
+ *
+ * - rotate: single closed glyph, 180° on open (chevron/caret/angle)
+ * - morph:  two-bar CSS plus→minus (generic accordion only; Divi uses swap)
+ * - swap:   instant closed/open glyph change (Divi plus/minus)
+ * - none:   no icon
+ *
+ * @param string $pair Icon pair key.
+ * @return string One of rotate|morph|swap|none.
+ * @since 1.1.8
+ */
+function fsm_faq_icon_motion( $pair ) {
+	switch ( $pair ) {
+		case 'chevron':
+		case 'caret':
+		case 'angle':
+			return 'rotate';
+		case 'plus_minus':
+			return 'morph';
+		case 'none':
+			return 'none';
+		default:
+			return 'swap';
+	}
 }
 
 /**
@@ -499,19 +573,17 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 		return;
 	}
 
-	// Divi's accordion always keeps one item open. Closing is provided either by the
-	// Foundation WCAG kit (fsm-divi-accordion-close) or by this scoped port of it.
-	// Skip our copy when the kit is already loaded so both do not slideToggle the
-	// same click (which would reverse the close).
-	if ( ! empty( $settings['allow_close'] ) && ! fsm_faq_divi_close_script_already_loaded() ) {
-		wp_enqueue_script(
-			'fsm-faq-divi-toggle',
-			$base_url . 'fsm-faq-divi-toggle.js',
-			array( 'jquery' ),
-			FSM_FAQ_VERSION,
-			true
-		);
-	}
+	// Always load the FAQ-scoped close handler for Divi markup. It respects
+	// data-allow-close and uses capture-phase stopImmediatePropagation so a
+	// Foundation WCAG kit (or an empty/commented kit file that is still enqueued)
+	// cannot double-fire or override the settings checkbox on .fsm-faq-divi.
+	wp_enqueue_script(
+		'fsm-faq-divi-toggle',
+		$base_url . 'fsm-faq-divi-toggle.js',
+		array( 'jquery' ),
+		FSM_FAQ_VERSION,
+		true
+	);
 
 	// Divi context: inline-only style handle.
 	$handle = 'fsm-faq-divi-inline';
@@ -526,10 +598,11 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 }
 
 /**
- * True when the Foundation WCAG kit already provides Divi accordion close-on-click.
+ * True when the Foundation WCAG kit has enqueued its Divi accordion close script.
  *
- * That kit enqueues `fsm-divi-accordion-close` globally. Loading a second handler on
- * the same titles would call slideToggle twice and reverse the close.
+ * Kept for diagnostics/back-compat. FAQ close is no longer skipped when this is
+ * true — `fsm-faq-divi-toggle.js` always owns `.fsm-faq-divi` via capture phase
+ * so an empty or active kit file cannot override the Allow close setting.
  *
  * @return bool
  * @since 1.1.0
@@ -569,14 +642,16 @@ function fsm_faq_build_dynamic_css( $context, $s ) {
 function fsm_faq_build_generic_color_css( $s ) {
 	$radius  = (int) $s['border_radius'];
 	$spacing = (int) $s['item_spacing'];
+	$icon_sz = isset( $s['icon_size'] ) ? max( 8, min( 64, (int) $s['icon_size'] ) ) : 16;
 
 	$vars = sprintf(
-		'.fsm-faq-accordion{--fsm-faq-toggle-bg:%1$s;--fsm-faq-toggle-bg-hover:%2$s;--fsm-faq-toggle-bg-open:%3$s;--fsm-faq-toggle-text:%4$s;--fsm-faq-icon-color:%5$s;--fsm-faq-radius:%6$dpx;--fsm-faq-border-width:%7$dpx;--fsm-faq-border-color:%8$s;}',
+		'.fsm-faq-accordion{--fsm-faq-toggle-bg:%1$s;--fsm-faq-toggle-bg-hover:%2$s;--fsm-faq-toggle-bg-open:%3$s;--fsm-faq-toggle-text:%4$s;--fsm-faq-icon-color:%5$s;--fsm-faq-icon-size:%6$dpx;--fsm-faq-radius:%7$dpx;--fsm-faq-border-width:%8$dpx;--fsm-faq-border-color:%9$s;}',
 		fsm_faq_css_hex( $s['toggle_bg'] ),
 		fsm_faq_css_hex( $s['toggle_bg_hover'] ),
 		fsm_faq_css_hex( $s['toggle_bg_open'] ),
 		fsm_faq_css_hex( $s['toggle_text'] ),
 		fsm_faq_css_hex( $s['icon_color'] ),
+		$icon_sz,
 		$radius,
 		(int) $s['border_width'],
 		fsm_faq_css_hex( $s['border_color'] )
@@ -592,14 +667,55 @@ function fsm_faq_build_generic_color_css( $s ) {
 /**
  * Generic accordion toggle icon CSS.
  *
+ * Motion by pair: rotate (chevron/caret/angle), morph (plus/minus two-bar),
+ * or none. Open-state icon visibility is gated by [data-allow-close] so it
+ * always matches the shortcode attribute / JS behavior.
+ *
  * @param array $s Settings.
  * @return string CSS.
  * @since 1.1.0
  */
 function fsm_faq_build_generic_icon_css( $s ) {
-	$pair = $s['icon_pair'];
-	if ( 'none' === $pair ) {
-		return '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}';
+	$pair   = $s['icon_pair'];
+	$motion = fsm_faq_icon_motion( $pair );
+
+	if ( 'none' === $motion ) {
+		return '.fsm-faq-accordion .fsm-faq-accordion__btn::before,'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__title{padding-right:0;}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn{min-height:0;padding-top:1em;padding-bottom:1em;}';
+	}
+
+	// Always hide open-state icons when closing is disabled (DOM attribute).
+	$hide_open = '.fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::before,'
+		. '.fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+		. 'content:none !important;opacity:0 !important;'
+		. '}';
+
+	// Two-bar plus → minus morph (library-agnostic).
+	if ( 'morph' === $motion ) {
+		$bar = 'max(2px,calc(var(--fsm-faq-icon-size)*0.125))';
+		return '.fsm-faq-accordion .fsm-faq-accordion__btn::before,'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'content:"";display:block;position:absolute;top:50%;right:1.25em;'
+			. 'padding:0;margin:0;border:none;box-sizing:border-box;'
+			. 'background-color:var(--fsm-faq-icon-color);'
+			. 'transition:transform 0.25s ease,opacity 0.2s ease,background-color 0.2s ease;'
+			. '-webkit-mask:none;mask:none;font-size:0;color:transparent;line-height:0;'
+			. '}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::before{'
+			. 'width:var(--fsm-faq-icon-size);height:' . $bar . ';'
+			. 'transform:translateY(-50%);'
+			. '}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'width:' . $bar . ';height:var(--fsm-faq-icon-size);'
+			. 'right:calc(1.25em + (var(--fsm-faq-icon-size) - ' . $bar . ')/2);'
+			. 'transform:translateY(-50%);'
+			. '}'
+			. '.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+			. 'transform:translateY(-50%) scaleY(0);'
+			. '}'
+			. $hide_open;
 	}
 
 	$defs = fsm_faq_icon_definitions();
@@ -609,26 +725,67 @@ function fsm_faq_build_generic_icon_css( $s ) {
 	}
 	$glyph = $defs[ $lib ][ $pair ];
 
+	// Clear morph bars if switching away from plus/minus.
+	$clear_before = '.fsm-faq-accordion .fsm-faq-accordion__btn::before{content:none;}';
+
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
-		$open   = fsm_faq_svg_data_uri( $glyph['open'] );
-		if ( ! $closed || ! $open ) {
+		if ( ! $closed ) {
 			return '';
 		}
-		return sprintf(
-			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"";width:1em;height:1em;background-color:var(--fsm-faq-icon-color);-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}'
-			. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{-webkit-mask-image:url(\'%2$s\');mask-image:url(\'%2$s\');}',
-			$closed,
-			$open
+		$css = $clear_before . sprintf(
+			'.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+			. 'content:"";width:var(--fsm-faq-icon-size);height:var(--fsm-faq-icon-size);'
+			. 'font-size:var(--fsm-faq-icon-size);background-color:var(--fsm-faq-icon-color);'
+			. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+			. 'transform:translateY(-50%%) rotate(0deg);'
+			. 'transition:transform 0.25s ease,color 0.2s ease,background-color 0.2s ease;'
+			. '}',
+			$closed
 		);
+
+		if ( 'rotate' === $motion ) {
+			$css .= '.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+				. 'transform:translateY(-50%) rotate(180deg);'
+				. '}';
+			return $css . $hide_open;
+		}
+
+		$open = fsm_faq_svg_data_uri( $glyph['open'] );
+		if ( $open ) {
+			$css .= sprintf(
+				'.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+				. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+				. '}',
+				$open
+			);
+		}
+		return $css . $hide_open;
 	}
 
-	return sprintf(
-		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:"%1$s";font-family:ETmodules;color:var(--fsm-faq-icon-color);}'
-		. '.fsm-faq-accordion .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%2$s";}',
-		$glyph['closed'],
+	// ET Modules font glyphs.
+	$css = $clear_before . sprintf(
+		'.fsm-faq-accordion .fsm-faq-accordion__btn::after{'
+		. 'content:"%1$s";font-family:ETmodules;font-size:var(--fsm-faq-icon-size);'
+		. 'color:var(--fsm-faq-icon-color);background:none;-webkit-mask:none;mask:none;'
+		. 'transform:translateY(-50%%) rotate(0deg);'
+		. 'transition:transform 0.25s ease,color 0.2s ease;'
+		. '}',
+		$glyph['closed']
+	);
+
+	if ( 'rotate' === $motion ) {
+		$css .= '.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{'
+			. 'transform:translateY(-50%) rotate(180deg);'
+			. '}';
+		return $css . $hide_open;
+	}
+
+	$css .= sprintf(
+		'.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after{content:"%1$s";}',
 		$glyph['open']
 	);
+	return $css . $hide_open;
 }
 
 /**
@@ -647,6 +804,11 @@ function fsm_faq_build_divi_color_css( $s ) {
 	$css  = sprintf( '.fsm-faq-divi .et_pb_toggle{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg'] ) );
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle:not(.et_pb_toggle_open):hover{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_hover'] ) );
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle.et_pb_toggle_open{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_open'] ) );
+	// Closable open items use hover color on hover (matches close affordance / kit).
+	$css .= sprintf(
+		'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle.et_pb_toggle_open:hover{background-color:%s;}',
+		fsm_faq_css_hex( $s['toggle_bg_hover'] )
+	);
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title{color:%s;}', fsm_faq_css_hex( $s['toggle_text'] ) );
 	$css .= '.fsm-faq-divi .et_pb_toggle_content{background-color:transparent;}';
 
@@ -669,13 +831,23 @@ function fsm_faq_build_divi_color_css( $s ) {
 /**
  * Divi toggle icon override CSS (targets .et_pb_toggle_title:before).
  *
+ * Directional pairs rotate the closed glyph; plus/minus keeps an instant
+ * closed/open swap (Divi only exposes one title ::before).
+ *
+ * Open-state visibility is gated by [data-allow-close] on .fsm-faq-divi so the
+ * close affordance only appears when the shortcode marks the accordion closable.
+ * The base rule no longer forces display on open items (that overrode Divi’s
+ * native hide and kept the icon visible when allow_close was off).
+ *
  * @param array $s Settings.
  * @return string CSS.
  * @since 1.1.0
  */
 function fsm_faq_build_divi_icon_css( $s ) {
-	$pair = $s['icon_pair'];
-	if ( 'none' === $pair ) {
+	$pair   = $s['icon_pair'];
+	$motion = fsm_faq_icon_motion( $pair );
+
+	if ( 'none' === $motion ) {
 		return '.fsm-faq-divi .et_pb_toggle_title:before{content:none !important;}';
 	}
 
@@ -684,31 +856,104 @@ function fsm_faq_build_divi_icon_css( $s ) {
 	if ( ! isset( $defs[ $lib ][ $pair ] ) ) {
 		return '';
 	}
-	$glyph = $defs[ $lib ][ $pair ];
-	$color = fsm_faq_css_hex( $s['icon_color'] );
+	$glyph      = $defs[ $lib ][ $pair ];
+	$color      = fsm_faq_css_hex( $s['icon_color'] );
+	$size       = isset( $s['icon_size'] ) ? max( 8, min( 64, (int) $s['icon_size'] ) ) : 16;
+	$use_rotate = ( 'rotate' === $motion );
+
+	// Hide open-item icon unless the accordion explicitly allows closing.
+	$hide_open = '.fsm-faq-divi[data-allow-close="0"] .et_pb_toggle_open .et_pb_toggle_title:before{'
+		. 'display:none !important;'
+		. '}';
 
 	if ( 'svg' === $lib ) {
 		$closed = fsm_faq_svg_data_uri( $glyph['closed'] );
-		$open   = fsm_faq_svg_data_uri( $glyph['open'] );
-		if ( ! $closed || ! $open ) {
+		if ( ! $closed ) {
 			return '';
 		}
-		return sprintf(
-			'.fsm-faq-divi .et_pb_toggle_title:before{content:"" !important;display:inline-block;width:1em;height:1em;background-color:%3$s;-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;}'
-			. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{-webkit-mask-image:url(\'%2$s\');mask-image:url(\'%2$s\');}',
+
+		// Closed toggles only — do not force display on open (Divi hides those by default).
+		$css = sprintf(
+			'.fsm-faq-divi .et_pb_toggle_close .et_pb_toggle_title:before,'
+			. '.fsm-faq-divi .et_pb_toggle:not(.et_pb_toggle_open) .et_pb_toggle_title:before{'
+			. 'content:"" !important;display:inline-block !important;'
+			. 'width:%3$dpx;height:%3$dpx;font-size:%3$dpx;background-color:%2$s;'
+			. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+			. 'transform:rotate(0deg);transition:transform 0.25s ease;'
+			. '}',
 			$closed,
-			$open,
-			$color
+			$color,
+			$size
 		);
+
+		if ( $use_rotate ) {
+			$css .= sprintf(
+				'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle_open .et_pb_toggle_title:before{'
+				. 'content:"" !important;display:inline-block !important;'
+				. 'width:%2$dpx;height:%2$dpx;font-size:%2$dpx;background-color:%3$s;'
+				. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+				. 'transform:rotate(180deg);transition:transform 0.25s ease;'
+				. '}',
+				$closed,
+				$size,
+				$color
+			);
+			return $css . $hide_open;
+		}
+
+		$open = fsm_faq_svg_data_uri( $glyph['open'] );
+		if ( $open ) {
+			$css .= sprintf(
+				'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle_open .et_pb_toggle_title:before{'
+				. 'content:"" !important;display:inline-block !important;'
+				. 'width:%3$dpx;height:%3$dpx;font-size:%3$dpx;background-color:%2$s;'
+				. '-webkit-mask:url(\'%1$s\') no-repeat center/contain;mask:url(\'%1$s\') no-repeat center/contain;'
+				. '}',
+				$open,
+				$color,
+				$size
+			);
+		}
+		return $css . $hide_open;
 	}
 
-	return sprintf(
-		'.fsm-faq-divi .et_pb_toggle_title:before{content:"%1$s" !important;font-family:ETmodules !important;color:%2$s !important;}'
-		. '.fsm-faq-divi .et_pb_toggle_open .et_pb_toggle_title:before{content:"%3$s" !important;}',
+	// ET Modules.
+	$css = sprintf(
+		'.fsm-faq-divi .et_pb_toggle_close .et_pb_toggle_title:before,'
+		. '.fsm-faq-divi .et_pb_toggle:not(.et_pb_toggle_open) .et_pb_toggle_title:before{'
+		. 'content:"%1$s" !important;display:inline-block !important;'
+		. 'font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;'
+		. 'transform:rotate(0deg);transition:transform 0.25s ease;'
+		. '}',
 		$glyph['closed'],
 		$color,
-		$glyph['open']
+		$size
 	);
+
+	if ( $use_rotate ) {
+		$css .= sprintf(
+			'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle_open .et_pb_toggle_title:before{'
+			. 'content:"%1$s" !important;display:inline-block !important;'
+			. 'font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;'
+			. 'transform:rotate(180deg);transition:transform 0.25s ease;'
+			. '}',
+			$glyph['closed'],
+			$color,
+			$size
+		);
+		return $css . $hide_open;
+	}
+
+	$css .= sprintf(
+		'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle_open .et_pb_toggle_title:before{'
+		. 'content:"%1$s" !important;display:inline-block !important;'
+		. 'font-family:ETmodules !important;font-size:%3$dpx !important;color:%2$s !important;'
+		. '}',
+		$glyph['open'],
+		$color,
+		$size
+	);
+	return $css . $hide_open;
 }
 
 /**

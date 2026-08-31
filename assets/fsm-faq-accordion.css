@@ -14,6 +14,7 @@
 	--fsm-faq-toggle-bg-open: #e0e0e0;
 	--fsm-faq-toggle-text: #333333;
 	--fsm-faq-icon-color: #666666;
+	--fsm-faq-icon-size: 16px;
 	--fsm-faq-radius: 0px;
 	--fsm-faq-border-width: 0px;
 	--fsm-faq-border-color: transparent;
@@ -32,7 +33,13 @@
 /* Accordion button (question) */
 .fsm-faq-accordion__btn {
 	width: 100%;
-	padding: 1em 1.25em;
+	box-sizing: border-box;
+	/* Vertical padding grows with icon size so overflow:hidden on the item does not clip it. */
+	padding-top: max(1em, calc((var(--fsm-faq-icon-size, 16px) - 1.4em) / 2 + 0.5em));
+	padding-bottom: max(1em, calc((var(--fsm-faq-icon-size, 16px) - 1.4em) / 2 + 0.5em));
+	padding-left: 1.25em;
+	padding-right: 1.25em;
+	min-height: calc(var(--fsm-faq-icon-size, 16px) + 1em);
 	text-align: left;
 	font-size: 1rem;
 	line-height: 1.4;
@@ -55,7 +62,8 @@
 /* Question heading – scoped for styling */
 .fsm-faq-accordion__title {
 	margin: 0;
-	padding-right: 1.5em; /* space before ::after icon */
+	/* Icon is absolute at right:1.25em; reserve its width + gap so text never overlaps (8–64px). */
+	padding-right: calc(var(--fsm-faq-icon-size, 16px) + 0.5em);
 	font-size: inherit;
 	font-weight: inherit;
 	line-height: inherit;
@@ -63,9 +71,9 @@
 }
 
 /*
- * Toggle icon via pseudo-element. The content/font/mask are supplied by the
- * plugin Settings engine (inline CSS); these are safe fallbacks for when no
- * icon library override is present.
+ * Toggle icon via pseudo-element. The content/font/mask (or two-bar morph) are
+ * supplied by the plugin Settings engine (inline CSS); these are safe fallbacks
+ * for when no icon library override is present.
  */
 .fsm-faq-accordion__btn::after {
 	content: '\02795'; /* Unicode plus (+) fallback */
@@ -73,15 +81,25 @@
 	position: absolute;
 	right: 1.25em;
 	top: 50%;
-	transform: translateY(-50%);
-	font-size: 0.85em;
+	transform: translateY(-50%) rotate(0deg);
+	width: var(--fsm-faq-icon-size, 16px);
+	height: var(--fsm-faq-icon-size, 16px);
+	font-size: var(--fsm-faq-icon-size, 16px);
 	line-height: 1;
+	text-align: center;
 	color: var(--fsm-faq-icon-color);
-	transition: color 0.2s ease;
+	transition: transform 0.25s ease, color 0.2s ease;
 }
 
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
-	content: '\02796'; /* Unicode minus (-) fallback */
+	content: '\02796'; /* Unicode minus (-) fallback when settings CSS is absent */
+}
+
+/* Hide open-state icon when closing is disabled (matches Divi default). */
+.fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::before,
+.fsm-faq-accordion[data-allow-close="0"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active::after {
+	content: none !important;
+	opacity: 0 !important;
 }
 
 /* Active (open) state – question and answer share this background */
@@ -90,6 +108,12 @@
 .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
 	background-color: var(--fsm-faq-toggle-bg-open);
 	color: var(--fsm-faq-toggle-text);
+}
+
+/* When closable, open-item hover uses the hover background (clickable to close). */
+.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,
+.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
+	background-color: var(--fsm-faq-toggle-bg-hover);
 }
 
 /* Panel (answer) – hidden by default; matches the open background */
