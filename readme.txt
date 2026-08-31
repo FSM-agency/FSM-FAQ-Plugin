@@ -30,7 +30,7 @@ A no-code settings page (FAQs -> Settings, requires manage_options) controls dis
 * **Border & shape** – Border thickness, border color, and corner radius. The border wraps the entire toggle, enclosing the question and its answer together. A thickness of 0 means no plugin border and leaves any existing theme border untouched.
 * **Layout & behavior** – Open the first FAQ by default (Divi + generic), allow an open FAQ to be closed by clicking it again (on by default; also shows the open-state/close icon), and spacing between items. Only one FAQ is open at a time either way.
 
-Note: Divi's accordion always keeps one item open. Closing the currently open item is added by this plugin (a scoped port of Foundation's `divi-accordion-close.js`) unless the WCAG kit is already loaded, in which case the plugin skips its copy so both scripts do not fire on the same click. Unchecking the setting restores default Divi behavior on sites without the kit.
+Note: Divi's accordion always keeps one item open. Closing the currently open item is added by this plugin’s scoped script on `[fsm_display_faqs]` (driven by the Allow close setting / `data-allow-close`). On Foundation sites the WCAG kit may also load `divi-accordion-close.js` globally; the plugin still owns FAQ accordions so that kit cannot override the checkbox (including when the kit file is enqueued but empty/commented out).
 * **Structured data** – See below.
 
 Changing settings automatically invalidates the FAQ output cache.
@@ -81,6 +81,7 @@ Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the re
 = 1.1.8 =
 * New: Icon size setting (px) under FAQs → Settings → Toggle Icon, applied to Divi and generic accordion icons.
 * Fix: Open-state (close) toggle icon is shown only when “Allow an open FAQ to be closed…” is checked; otherwise it stays hidden like default Divi. Visibility is gated by `data-allow-close` so Divi’s open icon cannot stay forced visible via `display:inline-block !important`.
+* Fix: FAQ close JS always loads for Divi markup and respects `data-allow-close` in capture phase, so an enqueued (even empty/commented) Foundation `divi-accordion-close.js` can no longer disable or double-fire close on `[fsm_display_faqs]`.
 * Fix: Generic accordion title padding and button height scale with icon size so large icons (up to 64px) do not overlap question text or get clipped by `overflow:hidden`.
 * New: Animated toggle icons — chevron/caret/angle rotate 180° in place; Plus/Minus morphs via CSS bars on the generic accordion and still swaps glyphs instantly on Divi.
 

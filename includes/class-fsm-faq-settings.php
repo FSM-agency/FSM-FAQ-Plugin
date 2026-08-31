@@ -555,19 +555,17 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 		return;
 	}
 
-	// Divi's accordion always keeps one item open. Closing is provided either by the
-	// Foundation WCAG kit (fsm-divi-accordion-close) or by this scoped port of it.
-	// Skip our copy when the kit is already loaded so both do not slideToggle the
-	// same click (which would reverse the close).
-	if ( fsm_faq_is_allow_close_enabled( $settings ) && ! fsm_faq_divi_close_script_already_loaded() ) {
-		wp_enqueue_script(
-			'fsm-faq-divi-toggle',
-			$base_url . 'fsm-faq-divi-toggle.js',
-			array( 'jquery' ),
-			FSM_FAQ_VERSION,
-			true
-		);
-	}
+	// Always load the FAQ-scoped close handler for Divi markup. It respects
+	// data-allow-close and uses capture-phase stopImmediatePropagation so a
+	// Foundation WCAG kit (or an empty/commented kit file that is still enqueued)
+	// cannot double-fire or override the settings checkbox on .fsm-faq-divi.
+	wp_enqueue_script(
+		'fsm-faq-divi-toggle',
+		$base_url . 'fsm-faq-divi-toggle.js',
+		array( 'jquery' ),
+		FSM_FAQ_VERSION,
+		true
+	);
 
 	// Divi context: inline-only style handle.
 	$handle = 'fsm-faq-divi-inline';
@@ -582,10 +580,11 @@ function fsm_faq_enqueue_frontend_assets( $context ) {
 }
 
 /**
- * True when the Foundation WCAG kit already provides Divi accordion close-on-click.
+ * True when the Foundation WCAG kit has enqueued its Divi accordion close script.
  *
- * That kit enqueues `fsm-divi-accordion-close` globally. Loading a second handler on
- * the same titles would call slideToggle twice and reverse the close.
+ * Kept for diagnostics/back-compat. FAQ close is no longer skipped when this is
+ * true — `fsm-faq-divi-toggle.js` always owns `.fsm-faq-divi` via capture phase
+ * so an empty or active kit file cannot override the Allow close setting.
  *
  * @return bool
  * @since 1.1.0
