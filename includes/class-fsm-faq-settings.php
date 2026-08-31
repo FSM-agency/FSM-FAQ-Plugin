@@ -232,6 +232,24 @@ function fsm_faq_is_allow_close_enabled( $settings = null ) {
 }
 
 /**
+ * Whether Divi FAQ markup should show the close affordance and allow close-on-click.
+ *
+ * True when the settings checkbox is on, OR when Foundation’s WCAG kit has
+ * enqueued `fsm-divi-accordion-close` (that script closes Divi accordions
+ * globally, so hiding the FAQ close icon would mismatch real behavior).
+ *
+ * @param array|null $settings Optional settings; defaults to fsm_faq_get_settings().
+ * @return bool
+ * @since 1.1.8
+ */
+function fsm_faq_is_divi_faq_close_afforded( $settings = null ) {
+	if ( fsm_faq_is_allow_close_enabled( $settings ) ) {
+		return true;
+	}
+	return fsm_faq_divi_close_script_already_loaded();
+}
+
+/**
  * Bust the FAQ HTML cache whenever settings are saved.
  *
  * @since 1.1.0
@@ -387,7 +405,7 @@ function fsm_faq_render_settings_page() {
 							<input type="checkbox" name="<?php echo esc_attr( FSM_FAQ_SETTINGS_OPTION ); ?>[allow_close]" value="1" <?php checked( $s['allow_close'], '1' ); ?> />
 							<?php echo esc_html__( 'Allow an open FAQ to be closed by clicking it again', 'fsm-faq' ); ?>
 						</label>
-						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked matches default Divi behavior on [fsm_display_faqs], where an open toggle stays open until another is clicked and the open-item icon is hidden. This setting controls FAQ accordions even on Foundation sites that also load the WCAG kit close script.', 'fsm-faq' ); ?></p>
+						<p class="description"><?php echo esc_html__( 'Only one FAQ is open at a time either way. When checked, the open-state (close) icon is shown so visitors can tell the item can be closed. Unchecked hides that icon and blocks close-on-click on [fsm_display_faqs] — unless the Foundation WCAG kit’s divi-accordion-close script is enqueued, which closes Divi accordions globally; in that case the close icon stays visible so it matches real behavior.', 'fsm-faq' ); ?></p>
 					</td>
 				</tr>
 				<tr>

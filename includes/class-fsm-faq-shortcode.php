@@ -208,7 +208,10 @@ function fsm_faq_render_divi_markup( $items ) {
 
 	$settings    = function_exists( 'fsm_faq_get_settings' ) ? fsm_faq_get_settings() : array( 'first_open' => '1', 'allow_close' => '1' );
 	$first_open  = isset( $settings['first_open'] ) && '1' === (string) $settings['first_open'];
-	$allow_close = function_exists( 'fsm_faq_is_allow_close_enabled' ) && fsm_faq_is_allow_close_enabled( $settings ) ? '1' : '0';
+	// Checkbox OR Foundation WCAG kit — kit closes accordions globally, so the icon must match.
+	$allow_close = function_exists( 'fsm_faq_is_divi_faq_close_afforded' )
+		? ( fsm_faq_is_divi_faq_close_afforded( $settings ) ? '1' : '0' )
+		: ( ( function_exists( 'fsm_faq_is_allow_close_enabled' ) && fsm_faq_is_allow_close_enabled( $settings ) ) ? '1' : '0' );
 
 	$html = '<div class="fsm-faq-divi et_pb_module et_pb_accordion et_pb_accordion_0_tb_body et_pb_text_align_left" data-allow-close="' . esc_attr( $allow_close ) . '">';
 	$i   = 0;
