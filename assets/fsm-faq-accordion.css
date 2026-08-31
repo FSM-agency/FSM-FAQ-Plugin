@@ -110,6 +110,12 @@
 	color: var(--fsm-faq-toggle-text);
 }
 
+/* When closable, open-item hover uses the hover background (clickable to close). */
+.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:hover,
+.fsm-faq-accordion[data-allow-close="1"] .fsm-faq-accordion__btn.fsm-faq-accordion__btn--active:focus {
+	background-color: var(--fsm-faq-toggle-bg-hover);
+}
+
 /* Panel (answer) – hidden by default; matches the open background */
 .fsm-faq-accordion__panel {
 	padding: 0 1.25em;

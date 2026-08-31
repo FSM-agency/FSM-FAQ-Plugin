@@ -804,6 +804,11 @@ function fsm_faq_build_divi_color_css( $s ) {
 	$css  = sprintf( '.fsm-faq-divi .et_pb_toggle{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg'] ) );
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle:not(.et_pb_toggle_open):hover{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_hover'] ) );
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle.et_pb_toggle_open{background-color:%s;}', fsm_faq_css_hex( $s['toggle_bg_open'] ) );
+	// Closable open items use hover color on hover (matches close affordance / kit).
+	$css .= sprintf(
+		'.fsm-faq-divi[data-allow-close="1"] .et_pb_toggle.et_pb_toggle_open:hover{background-color:%s;}',
+		fsm_faq_css_hex( $s['toggle_bg_hover'] )
+	);
 	$css .= sprintf( '.fsm-faq-divi .et_pb_toggle_title{color:%s;}', fsm_faq_css_hex( $s['toggle_text'] ) );
 	$css .= '.fsm-faq-divi .et_pb_toggle_content{background-color:transparent;}';
 
