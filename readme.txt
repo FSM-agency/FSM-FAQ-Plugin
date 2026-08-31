@@ -81,6 +81,7 @@ Cutover: keep the GitHub repo public until sites are on 1.1.0+, then make the re
 = 1.1.8 =
 * New: Icon size setting (px) under FAQs → Settings → Toggle Icon, applied to Divi and generic accordion icons.
 * Fix: Open-state (close) toggle icon is shown only when “Allow an open FAQ to be closed…” is checked; otherwise it stays hidden like default Divi.
+* Fix: Generic accordion title padding and button height scale with icon size so large icons (up to 64px) do not overlap question text or get clipped by `overflow:hidden`.
 
 = 1.1.7 =
 * Fix: Keep the open-item toggle icon visible when closing is allowed — Divi accordion CSS sets `display:none` on `.et_pb_toggle_open > .et_pb_toggle_title::before`; Settings-driven SVG/ET icons now force `display:inline-block !important` on open state when allow_close is on.

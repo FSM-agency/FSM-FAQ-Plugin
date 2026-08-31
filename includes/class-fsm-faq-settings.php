@@ -610,7 +610,9 @@ function fsm_faq_build_generic_color_css( $s ) {
 function fsm_faq_build_generic_icon_css( $s ) {
 	$pair = $s['icon_pair'];
 	if ( 'none' === $pair ) {
-		return '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}';
+		return '.fsm-faq-accordion .fsm-faq-accordion__btn::after{content:none;}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__title{padding-right:0;}'
+			. '.fsm-faq-accordion .fsm-faq-accordion__btn{min-height:0;padding-top:1em;padding-bottom:1em;}';
 	}
 
 	$defs = fsm_faq_icon_definitions();
